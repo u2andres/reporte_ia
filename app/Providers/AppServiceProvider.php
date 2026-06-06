@@ -19,6 +19,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // tc-lib-pdf busca las fuentes (.json/.z) en la carpeta apuntada por
+        // esta constante. Importarlas con: php artisan pdf:import-font
+        if (! defined('K_PATH_FONTS')) {
+            define('K_PATH_FONTS', storage_path('fonts'));
+        }
     }
 }

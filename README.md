@@ -16,6 +16,7 @@ Aplicación web construida con **Laravel 12**. El proyecto está pensado como ba
 - [Base de datos](#base-de-datos)
 - [Autenticación](#autenticación)
 - [Frontend](#frontend)
+- [Reportes en PDF](#reportes-en-pdf)
 - [Comandos útiles](#comandos-útiles)
 - [Testing](#testing)
 - [Próximos pasos sugeridos](#próximos-pasos-sugeridos)
@@ -31,6 +32,7 @@ Aplicación web construida con **Laravel 12**. El proyecto está pensado como ba
 | Base de datos     | SQLite (por defecto)                |
 | Frontend / build  | Vite 7                              |
 | CSS               | Tailwind CSS 4                       |
+| Reportes PDF      | tc-lib-pdf 8 ([guía de integración](INTEGRAR-TC-LIB.md)) |
 | HTTP cliente JS   | Axios                               |
 | Cola / Cache / Sesión | driver `database`               |
 | REPL              | Laravel Tinker                      |
@@ -230,6 +232,23 @@ npm run build    # build de producción
 
 ---
 
+## Reportes en PDF
+
+El proyecto integra **[tc-lib-pdf](https://github.com/tecnickcom/tc-lib-pdf)** para generar reportes en PDF. La integración (constante `K_PATH_FONTS`, comando de importación de fuentes, controlador y ruta de prueba) está documentada en detalle en:
+
+📄 **[INTEGRAR-TC-LIB.md](INTEGRAR-TC-LIB.md)**
+
+Prueba rápida:
+
+```bash
+php artisan pdf:import-font   # Importa una fuente (solo la primera vez)
+php artisan serve             # Levanta el servidor
+```
+
+Luego visitar **http://localhost:8000/reporte/test** para ver un PDF de ejemplo.
+
+---
+
 ## Comandos útiles
 
 ```bash
@@ -263,7 +282,7 @@ Como base para un sistema de **reportes de cursos**, los siguientes pasos típic
 2. Crear los controladores y rutas CRUD correspondientes.
 3. Construir las vistas Blade con un layout común.
 4. Instalar un starter kit de autenticación si se requiere login.
-5. (Opcional) Agregar generación de reportes/exportación (PDF, Excel).
+5. Conectar la generación de PDF (ya integrada con tc-lib-pdf, ver [INTEGRAR-TC-LIB.md](INTEGRAR-TC-LIB.md)) a datos reales de la base.
 
 ---
 
