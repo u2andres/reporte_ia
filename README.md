@@ -1,59 +1,270 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Lrvl_curso_reporte
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplicación web construida con **Laravel 12**. El proyecto está pensado como base para un sistema de **reportes de cursos**. Actualmente se encuentra en estado inicial (esqueleto de Laravel recién instalado), listo para empezar a desarrollar la lógica de negocio.
 
-## About Laravel
+> **Estado actual:** proyecto base. Incluye la página de bienvenida, el modelo `User` y las migraciones estándar de Laravel. Todavía no hay controladores, rutas ni vistas propias del dominio de "cursos/reportes".
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Tabla de contenidos
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- [Stack tecnológico](#stack-tecnológico)
+- [Requisitos](#requisitos)
+- [Instalación](#instalación)
+- [Ejecución en desarrollo](#ejecución-en-desarrollo)
+- [Estructura del proyecto](#estructura-del-proyecto)
+- [Base de datos](#base-de-datos)
+- [Autenticación](#autenticación)
+- [Frontend](#frontend)
+- [Comandos útiles](#comandos-útiles)
+- [Testing](#testing)
+- [Próximos pasos sugeridos](#próximos-pasos-sugeridos)
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## Stack tecnológico
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+| Componente        | Tecnología                          |
+|-------------------|-------------------------------------|
+| Framework         | Laravel 12                          |
+| Lenguaje          | PHP 8.2+                            |
+| Base de datos     | SQLite (por defecto)                |
+| Frontend / build  | Vite 7                              |
+| CSS               | Tailwind CSS 4                       |
+| HTTP cliente JS   | Axios                               |
+| Cola / Cache / Sesión | driver `database`               |
+| REPL              | Laravel Tinker                      |
+| Linter            | Laravel Pint                        |
+| Tests             | PHPUnit 11                          |
 
-## Laravel Sponsors
+---
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## Requisitos
 
-### Premium Partners
+- **PHP** >= 8.2 (con las extensiones habituales de Laravel: `pdo_sqlite`, `mbstring`, `openssl`, etc.)
+- **Composer**
+- **Node.js** y **npm**
+- (Opcional) **XAMPP** — el proyecto vive bajo `c:\eid\Xampp_82\htdocs\desarrollo\`
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+---
 
-## Contributing
+## Instalación
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+El proyecto define un script `setup` en `composer.json` que automatiza todo el proceso:
 
-## Code of Conduct
+```bash
+composer setup
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Este comando ejecuta, en orden:
 
-## Security Vulnerabilities
+1. `composer install` — instala dependencias PHP
+2. Copia `.env.example` a `.env` (si no existe)
+3. `php artisan key:generate` — genera la clave de aplicación
+4. `php artisan migrate --force` — corre las migraciones
+5. `npm install` — instala dependencias JS
+6. `npm run build` — compila los assets
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Instalación manual (paso a paso)
 
-## License
+Si preferís hacerlo a mano:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+composer install
+copy .env.example .env          # En PowerShell: Copy-Item .env.example .env
+php artisan key:generate
+
+# Crear la base SQLite vacía (Windows / PowerShell)
+New-Item -ItemType File database\database.sqlite
+
+php artisan migrate
+npm install
+npm run build
+```
+
+---
+
+## Ejecución en desarrollo
+
+La forma recomendada es usar el script `dev`, que levanta **servidor + cola + logs + Vite** en paralelo:
+
+```bash
+composer dev
+```
+
+Esto ejecuta concurrentemente:
+
+| Proceso | Comando                                      | Para qué                  |
+|---------|----------------------------------------------|---------------------------|
+| server  | `php artisan serve`                          | Servidor HTTP de Laravel  |
+| queue   | `php artisan queue:listen --tries=1`         | Procesa los jobs en cola  |
+| logs    | `php artisan pail`                           | Stream de logs en vivo    |
+| vite    | `npm run dev`                                | Hot reload de assets      |
+
+La app queda disponible en **http://localhost:8000**.
+
+Si solo necesitás el servidor:
+
+```bash
+php artisan serve
+npm run dev   # en otra terminal, para los assets
+```
+
+---
+
+## Estructura del proyecto
+
+```
+Lrvl_curso_reporte/
+├── app/
+│   ├── Http/Controllers/
+│   │   └── Controller.php          # Controlador base abstracto
+│   ├── Models/
+│   │   └── User.php                # Modelo de usuario (Authenticatable)
+│   └── Providers/
+│       └── AppServiceProvider.php  # Service provider (vacío por ahora)
+├── bootstrap/
+│   └── app.php                     # Configuración de la app (rutas, middleware, health check /up)
+├── config/                         # Configuración (database, auth, etc.)
+├── database/
+│   ├── factories/
+│   │   └── UserFactory.php         # Factory de usuarios (datos falsos)
+│   ├── migrations/                 # Migraciones (users, cache, jobs)
+│   ├── seeders/
+│   │   └── DatabaseSeeder.php      # Seeder: crea un usuario de prueba
+│   └── database.sqlite             # Base SQLite (se crea en la instalación)
+├── resources/
+│   ├── css/app.css                 # Entrada Tailwind CSS v4
+│   ├── js/app.js                   # Entrada JS (Axios)
+│   └── views/
+│       └── welcome.blade.php       # Página de bienvenida
+├── routes/
+│   ├── web.php                     # Rutas web (solo "/")
+│   └── console.php                 # Comandos de consola (inspire)
+├── tests/                          # Tests (PHPUnit)
+├── composer.json
+├── package.json
+└── vite.config.js
+```
+
+### Rutas actuales
+
+| Método | URI   | Acción                          | Nombre |
+|--------|-------|---------------------------------|--------|
+| GET    | `/`   | Closure → vista `welcome`       | —      |
+| GET    | `/up` | Health check (Laravel)          | —      |
+
+> Aún no existe `routes/api.php` ni controladores de dominio.
+
+---
+
+## Base de datos
+
+Por defecto el proyecto usa **SQLite** (`database/database.sqlite`), ideal para desarrollo y aprendizaje.
+
+### Tablas creadas por las migraciones
+
+- **users** — `id`, `name`, `email` (único), `email_verified_at`, `password`, `remember_token`, timestamps
+- **password_reset_tokens** — `email`, `token`, `created_at`
+- **sessions** — `id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`
+- **cache** / **cache_locks** — almacenamiento de caché
+- **jobs** / **job_batches** / **failed_jobs** — sistema de colas
+
+### Cambiar a MySQL/MariaDB (XAMPP)
+
+Si querés usar MySQL de XAMPP en lugar de SQLite, editá el `.env`:
+
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=curso_reporte
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+Luego creá la base en phpMyAdmin y corré `php artisan migrate`.
+
+### Datos de prueba (seeders)
+
+```bash
+php artisan db:seed
+```
+
+Crea un usuario de prueba:
+
+- **Email:** `test@example.com`
+- **Nombre:** `Test User`
+
+---
+
+## Autenticación
+
+La autenticación está **configurada pero no scaffoldeada**:
+
+- Guard `web` con driver `session` (`config/auth.php`)
+- Provider `users` basado en Eloquent (`App\Models\User`)
+- Soporte de "recordarme" y reseteo de contraseña (tokens con expiración de 60 min)
+
+La vista `welcome.blade.php` ya referencia las rutas `login`, `register` y `/dashboard`, pero esas rutas todavía no están definidas. Para habilitar login/registro completos podés instalar un starter kit:
+
+```bash
+# Opción liviana
+composer require laravel/breeze --dev
+php artisan breeze:install
+```
+
+---
+
+## Frontend
+
+- **Tailwind CSS v4** integrado vía `@tailwindcss/vite` (configurado en `vite.config.js`).
+- Entradas de assets: `resources/css/app.css` y `resources/js/app.js`.
+- **Axios** preconfigurado en `resources/js/bootstrap.js` con el header `X-Requested-With`.
+- Build de producción en `public/build/`.
+
+```bash
+npm run dev      # desarrollo con hot reload
+npm run build    # build de producción
+```
+
+---
+
+## Comandos útiles
+
+```bash
+php artisan migrate              # Correr migraciones
+php artisan migrate:fresh --seed # Recrear DB y poblar con seeders
+php artisan tinker               # REPL interactivo
+php artisan route:list           # Listar todas las rutas
+php artisan pail                 # Ver logs en tiempo real
+./vendor/bin/pint                # Formatear código (linter)
+```
+
+---
+
+## Testing
+
+```bash
+composer test
+# o directamente:
+php artisan test
+```
+
+El script `test` limpia la configuración cacheada antes de ejecutar los tests con PHPUnit.
+
+---
+
+## Próximos pasos sugeridos
+
+Como base para un sistema de **reportes de cursos**, los siguientes pasos típicos serían:
+
+1. Definir los modelos del dominio (p. ej. `Curso`, `Alumno`, `Inscripcion`, `Reporte`) con sus migraciones.
+2. Crear los controladores y rutas CRUD correspondientes.
+3. Construir las vistas Blade con un layout común.
+4. Instalar un starter kit de autenticación si se requiere login.
+5. (Opcional) Agregar generación de reportes/exportación (PDF, Excel).
+
+---
+
+_Generado a partir del análisis del código del proyecto._
