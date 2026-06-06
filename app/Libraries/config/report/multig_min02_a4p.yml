@@ -1,0 +1,1000 @@
+
+# yml de configuracion del listado...
+# -----------------------------------
+# a) corresponde al ticket #4813 : Listado de "Planta Completa Valorizada"
+#    - 1er boton desde "izquierda"
+# b) el "tag" del listado es : "min_pof_02"
+# c) se lo maneja por "areas" => se lo hace desde el modulo "listado_area"
+
+# configuracion default...
+config1default:
+  PDF_PAGE_FORMAT: "A4"
+  # page orientation (P=portrait, L=landscape)
+  PDF_PAGE_ORIENTATION: "P"
+  # document creator
+  PDF_CREATOR: "Ministerio de Educación"
+  # document author
+  PDF_AUTHOR: "Ministerio de Educación"
+  # header title
+  PDF_HEADER_TITLE: "GOBIERNO DE LA CIUDAD DE BUENOS AIRES"
+  # header description string
+  PDF_HEADER_STRING: >
+    "DIRECCIÓN GENERAL DE PERSONAL DOCENTE Y NO DOCENTES"</br>
+    'Gerencia Operativa de Recursos Humanos Docentes.'
+  # image logo
+  PDF_HEADER_LOGO: "logo_ciudad.png"
+  # header logo image width [mm]
+  PDF_HEADER_LOGO_WIDTH: 15,
+  # document unit of measure [pt=point, mm=millimeter, cm=centimeter, in=inch]
+  PDF_UNIT: "mm"
+  # 
+  #  # header margin
+  #  PDF_MARGIN_HEADER: "10"
+  #  # footer margin
+  #  PDF_MARGIN_FOOTER: "35"
+  #  # top margin
+  #  PDF_MARGIN_TOP: "20"
+  #  # bottom margin
+  #  PDF_MARGIN_BOTTOM: "10"
+  #  # left margin
+  #  PDF_MARGIN_LEFT: "10"
+  #  # right margin
+  #  PDF_MARGIN_RIGHT: "10"
+  #
+  # header margin
+  PDF_MARGIN_HEADER: "10"
+  # footer margin
+  PDF_MARGIN_FOOTER: "10"
+  # top margin
+  PDF_MARGIN_TOP: "30"
+  # bottom margin
+  PDF_MARGIN_BOTTOM: "10"
+  # left margin
+  PDF_MARGIN_LEFT: "10"
+  # right margin
+  PDF_MARGIN_RIGHT: "10"
+  # default main font name
+  PDF_FONT_NAME_MAIN: "times"
+  # default main font size
+  PDF_FONT_SIZE_MAIN: "10"
+  # default data font name
+  PDF_FONT_NAME_DATA: "times"
+  # default data font size
+  PDF_FONT_SIZE_DATA: "8"
+  # default monospaced font name
+  PDF_FONT_MONOSPACED: "times"
+  # Ratio used to scale the images
+  PDF_IMAGE_SCALE_RATIO: "4"
+  # 
+  # adicionales...
+  # --------------
+  PDF_TITLE:    "TCPDF Tutorial - TCPDF + MySQL"
+  PDF_KEYWORDS: "TCPDF, PDF, example, test, mysql"
+  PDF_SUBJECT:  "TCPDF, PDF, example, test, mysql"
+
+# configuracion de los margenes...
+# si no estan definidos usa desde la key => config1default:
+# OJO: es requerido este hash...
+margin:
+  # left:    15
+  # top:     23
+  # right:   15
+  # bottom:  10
+  # 
+  # # ...
+  # header:   5 
+  # footer:  10 
+
+# zona de PRE-listado...
+# -----------------------
+# - tiene SOLO un callback para ejecutar "antes" de iniciar el reporte...
+pre1zone:
+  callback:
+
+# zona de POST-listado...
+# -----------------------
+# - tiene SOLO un callback para ejecutar "despues" de finalizr el reporte...
+post1zone:
+  callback: [ 'generarPdf', 'hd_end1report' ]
+  
+# zona de cabecera...
+header1zone:
+  # rojo...
+  # fillcolor:  [ 255, 0, 0 ]
+  # WhiteSmoke
+  # fillcolor:  [ 245, 245, 245 ]
+  # Gris claro
+  fillcolor:  [ 225, 225, 225 ]
+  
+  # blanco...
+  # textcolor:  255  
+  # negro...
+  textcolor:  0 
+  
+  # bordes en rojo...
+  # drawcolor:  [ 128, 0, 0 ]
+  # bordes en negro...
+  drawcolor:  [ 0, 0, 0 ]
+  
+  linewidth:  0.1
+  font:       [ 'times', 'B', 8 ]
+  
+  callback: [ 'generarPdf', 'mk_header' ]
+
+  # grilla("libre") "asociada"...
+  grid:
+    # se paso como a la "cabecera"...
+    # - aparecera entonces en c/hoja( como una cabecera "variable" )...
+    grid_1: 
+      data:
+        # para hash...
+        callback1hash:  [ 'generarPdf', 'cbk_estab' ]
+        
+        # para doctrine query...
+        # num de registros usados como limit...
+        n_limit: 100
+        callback1query: 
+        callback1count: 
+        
+      cell:
+        cell_1:
+          width: 190
+          header: # 'GRILLA DE TEST 01111'
+          key1data: 'dt_mensaje'
+      
+          # ...
+          align_header:  
+          border_header: 
+          
+          # sin borde para el dato...
+          align_data:  
+          border_data: false  # true
+          
+      group:
+
+# zona de pie...
+footer1zone:
+  callback: [ 'generarPdf', 'mk_footer' ]
+  
+# zona de filas...
+row1zone:
+  # celeste claro...
+  #fillcolor:  [ 224, 235, 255 ]
+  # gris claro...
+  fillcolor:  [  245, 245, 245 ]
+  
+  # negro...
+  textcolor:  0 
+  font:       [ 'times', '', 8 ]
+  
+  # si true(xdf), usa fillcolor alternativamente c/c/fila...
+  l_fill: true
+
+# zona de grupos...
+group1zone:
+
+# zona de grillas...
+grid1zone:
+  callback:  # [ 'generarPdf', 'cbk_ft1detalle' ]
+
+# ------------------------------------------------------
+# B) DESDE ACA CONFIGURACION P/C/"GRILLA" DEL LISTADO...
+# ------------------------------------------------------
+
+# grillas del listado...
+grid:
+  # se paso a la cabecera...
+  # grid_1: 
+  #   data:
+  #     # para hash...
+  #     callback1hash:  [ 'generarPdf', 'cbk_estab' ]
+  #     
+  #     # para doctrine query...
+  #     # num de registros usados como limit...
+  #     n_limit: 100
+  #     callback1query: 
+  #     callback1count: 
+  #     
+  #   cell:
+  #     cell_1:
+  #       width: 190
+  #       header: # 'GRILLA DE TEST 01111'
+  #       key1data: 'dt_mensaje'
+  #   
+  #       # ...
+  #       align_header:  
+  #       border_header: 
+  #       
+  #       # sin borde para el dato...
+  #       align_data:  
+  #       border_data: false  # true
+  #       
+  #   group:
+
+  # grillas de "conduccion"...
+  # --------------------------
+  grid_2a: 
+    data:
+      # para hash...
+      callback1hash:  [ 'generarPdf', 'cbk_head1conduccion' ]
+      
+      # para doctrine query...
+      # num de registros usados como limit...
+      n_limit: 100
+      callback1query: 
+      callback1count: 
+      
+    cell:
+      cell_1:
+        width: 190
+        header: # 'GRILLA DE TEST 01111'
+        key1data: 'dt_mensaje'
+    
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  
+        border_data: false  # true
+        
+    group:
+
+  grid_2b: 
+    data:
+      # para hash...
+      callback1hash:  [ 'generarPdf', 'cbk_conduccion' ]
+      
+      # para doctrine query...
+      # num de registros usados como limit...
+      n_limit: 100
+      callback1query: 
+      callback1count: 
+      
+    cell:
+      cell_1:
+        width:    115
+        header:   'Cargo'
+        key1data: 'cargo1d'
+    
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  
+        border_data: false  # true
+
+      cell_2:
+        width:    30
+        header:   'Turno'
+        key1data: 'turno1d'
+    
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  'C'
+        border_data: false  # true
+
+      # cell_3:
+      #   width:    15
+      #   header:   %anio_previo%
+      #   key1data: 'cnt_previa'
+      # 
+      #   # ...
+      #   align_header:  
+      #   border_header: 
+      #   
+      #   # sin borde para el dato...
+      #   align_data:  'C'
+      #   border_data: false  # true
+      
+      cell_4:
+        width:    15
+        header:   %anio_header%
+        key1data: 'cnt_actual'
+      
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  'C'
+        border_data: false  # true
+
+      # cell_5:
+      #   width:    20
+      #   header:   'Diferencia'
+      #   key1data: 'diff'
+      # 
+      #   # ...
+      #   align_header:  
+      #   border_header: 
+      #   
+      #   # sin borde para el dato...
+      #   align_data:  'C'
+      #   border_data: false  # true
+
+      cell_6:
+        width:    30
+        header:   'Valorizaciòn'
+        key1data: 'valoriz'
+      
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  'C'
+        border_data: false  # true
+        
+    group:
+
+  grid_2c: 
+    data:
+      # para hash...
+      callback1hash:  [ 'generarPdf', 'cbk_subt1conduccion' ]
+      
+      # para doctrine query...
+      # num de registros usados como limit...
+      n_limit: 100
+      callback1query: 
+      callback1count: 
+      
+    cell:
+      cell_1:
+        width:    105
+        header:   
+        key1data: 'cargo1d'
+    
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  
+        border_data: false  # true
+
+      cell_2:
+        width:    40
+        header:   
+        key1data: 'turno1d'
+    
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  'C'
+        border_data: false  # true
+
+      # cell_3:
+      #   width:    15
+      #   header:   
+      #   key1data: 'cnt_previa'
+      # 
+      #   # ...
+      #   align_header:  
+      #   border_header: 
+      #   
+      #   # sin borde para el dato...
+      #   align_data:  'C'
+      #   border_data: false  # true
+      
+      cell_4:
+        width:    15
+        header:   
+        key1data: 'cnt_actual'
+      
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  'C'
+        border_data: false  # true
+
+      # cell_5:
+      #   width:    20
+      #   header:   
+      #   key1data: 'diff'
+      # 
+      #   # ...
+      #   align_header:  
+      #   border_header: 
+      #   
+      #   # sin borde para el dato...
+      #   align_data:  'C'
+      #   border_data: false  # true
+
+      cell_6:
+        width:    30
+        header:   
+        key1data: 'valoriz'
+      
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  'C'
+        border_data: false  # true
+
+    group:
+
+  # grillas de "ejecucion"...
+  # --------------------------
+  grid_3a: 
+    data:
+      # para hash...
+      callback1hash:  [ 'generarPdf', 'cbk_head1ejecucion' ]
+      
+      # para doctrine query...
+      # num de registros usados como limit...
+      n_limit: 100
+      callback1query: 
+      callback1count: 
+      
+    cell:
+      cell_1:
+        width: 190
+        header: # 'GRILLA DE TEST 01111'
+        key1data: 'dt_mensaje'
+    
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  
+        border_data: false  # true
+        
+    group:
+
+  grid_3b: 
+    data:
+      # para hash...
+      callback1hash:  [ 'generarPdf', 'cbk_ejecucion' ]
+      
+      # para doctrine query...
+      # num de registros usados como limit...
+      n_limit: 100
+      callback1query: 
+      callback1count: 
+      
+    cell:
+      cell_1:
+        width:    115
+        header:   'Cargo'
+        key1data: 'cargo1d'
+    
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  
+        border_data: false  # true
+
+      cell_2:
+        width:    30
+        header:   'Turno'
+        key1data: 'turno1d'
+    
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  'C'
+        border_data: false  # true
+
+      # cell_3:
+      #   width:    15
+      #   header:   %anio_previo%
+      #   key1data: 'cnt_previa'
+      # 
+      #   # ...
+      #   align_header:  
+      #   border_header: 
+      #   
+      #   # sin borde para el dato...
+      #   align_data:  'C'
+      #   border_data: false  # true
+      
+      cell_4:
+        width:    15
+        header:   %anio_header%
+        key1data: 'cnt_actual'
+      
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  'C'
+        border_data: false  # true
+
+      # cell_5:
+      #   width:    20
+      #   header:   'Diferencia'
+      #   key1data: 'diff'
+      # 
+      #   # ...
+      #   align_header:  
+      #   border_header: 
+      #   
+      #   # sin borde para el dato...
+      #   align_data:  'C'
+      #   border_data: false  # true
+
+      cell_6:
+        width:    30
+        header:   'Valorizaciòn'
+        key1data: 'valoriz'
+      
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  'C'
+        border_data: false  # true
+
+    group:
+
+  grid_3c: 
+    data:
+      # para hash...
+      callback1hash:  [ 'generarPdf', 'cbk_subt1ejecucion' ]
+      
+      # para doctrine query...
+      # num de registros usados como limit...
+      n_limit: 100
+      callback1query: 
+      callback1count: 
+      
+    cell:
+      cell_1:
+        width:    105
+        header:   
+        key1data: 'cargo1d'
+    
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  
+        border_data: false  # true
+
+      cell_2:
+        width:    40
+        header:   
+        key1data: 'turno1d'
+    
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  'C'
+        border_data: false  # true
+
+      # cell_3:
+      #   width:    15
+      #   header:   
+      #   key1data: 'cnt_previa'
+      # 
+      #   # ...
+      #   align_header:  
+      #   border_header: 
+      #   
+      #   # sin borde para el dato...
+      #   align_data:  'C'
+      #   border_data: false  # true
+      
+      cell_4:
+        width:    15
+        header:   
+        key1data: 'cnt_actual'
+      
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  'C'
+        border_data: false  # true
+
+      # cell_5:
+      #   width:    20
+      #   header:   
+      #   key1data: 'diff'
+      # 
+      #   # ...
+      #   align_header:  
+      #   border_header: 
+      #   
+      #   # sin borde para el dato...
+      #   align_data:  'C'
+      #   border_data: false  # true
+
+      cell_6:
+        width:    30
+        header:   
+        key1data: 'valoriz'
+      
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  'C'
+        border_data: false  # true
+
+    group:
+
+  # grillas de "horas catedra"...
+  # -----------------------------
+  grid_4a: 
+    data:
+      # para hash...
+      callback1hash:  [ 'generarPdf', 'cbk_head1hcatedra' ]
+      
+      # para doctrine query...
+      # num de registros usados como limit...
+      n_limit: 100
+      callback1query: 
+      callback1count: 
+      
+    cell:
+      cell_1:
+        width: 190
+        header: # 'GRILLA DE TEST 01111'
+        key1data: 'dt_mensaje'
+    
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  
+        border_data: false  # true
+        
+    group:
+
+  grid_4b: 
+    data:
+      # para hash...
+      callback1hash:  [ 'generarPdf', 'cbk_hcatedra' ]
+      
+      # para doctrine query...
+      # num de registros usados como limit...
+      n_limit: 100
+      callback1query: 
+      callback1count: 
+      
+    cell:
+      cell_1:
+        width:    115
+        header:   'Cargo'
+        key1data: 'cargo1d'
+    
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  
+        border_data: false  # true
+
+      cell_2:
+        width:    30
+        header:   'Turno'
+        key1data: 'turno1d'
+    
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  'C'
+        border_data: false  # true
+
+      # cell_3:
+      #   width:    15
+      #   header:   %anio_previo%
+      #   key1data: 'cnt_previa'
+      # 
+      #   # ...
+      #   align_header:  
+      #   border_header: 
+      #   
+      #   # sin borde para el dato...
+      #   align_data:  'C'
+      #   border_data: false  # true
+      
+      cell_4:
+        width:    15
+        header:   %anio_header%
+        key1data: 'cnt_actual'
+      
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  'C'
+        border_data: false  # true
+
+      # cell_5:
+      #   width:    20
+      #   header:   'Diferencia'
+      #   key1data: 'diff'
+      # 
+      #   # ...
+      #   align_header:  
+      #   border_header: 
+      #   
+      #   # sin borde para el dato...
+      #   align_data:  'C'
+      #   border_data: false  # true
+
+      cell_6:
+        width:    30
+        header:   'Valorizaciòn'
+        key1data: 'valoriz'
+      
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  'C'
+        border_data: false  # true
+
+    group:
+
+  grid_4c: 
+    data:
+      # para hash...
+      callback1hash:  [ 'generarPdf', 'cbk_subt1hcatedra' ]
+      
+      # para doctrine query...
+      # num de registros usados como limit...
+      n_limit: 100
+      callback1query: 
+      callback1count: 
+      
+    cell:
+      cell_1:
+        width:    105
+        header:   
+        key1data: 'cargo1d'
+    
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  
+        border_data: false  # true
+
+      cell_2:
+        width:    40
+        header:   
+        key1data: 'turno1d'
+    
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  'C'
+        border_data: false  # true
+
+      # cell_3:
+      #   width:    15
+      #   header:   
+      #   key1data: 'cnt_previa'
+      # 
+      #   # ...
+      #   align_header:  
+      #   border_header: 
+      #   
+      #   # sin borde para el dato...
+      #   align_data:  'C'
+      #   border_data: false  # true
+      
+      cell_4:
+        width:    15
+        header:   
+        key1data: 'cnt_actual'
+      
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  'C'
+        border_data: false  # true
+
+      # cell_5:
+      #   width:    20
+      #   header:   
+      #   key1data: 'diff'
+      # 
+      #   # ...
+      #   align_header:  
+      #   border_header: 
+      #   
+      #   # sin borde para el dato...
+      #   align_data:  'C'
+      #   border_data: false  # true
+
+      cell_6:
+        width:    30
+        header:   
+        key1data: 'valoriz'
+      
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  'C'
+        border_data: false  # true
+
+    group:
+
+  grid_5a: 
+    data:
+      # para hash...
+      callback1hash:  [ 'generarPdf', 'cbk_total' ]
+      
+      # para doctrine query...
+      # num de registros usados como limit...
+      n_limit: 100
+      callback1query: 
+      callback1count: 
+      
+    cell:
+      cell_1:
+        width:    105
+        header:   
+        key1data: 'cargo1d'
+    
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  
+        border_data: false  # true
+
+      cell_2:
+        width:    40
+        header:   
+        key1data: 'turno1d'
+    
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  'C'
+        border_data: false  # true
+
+      # cell_3:
+      #   width:    15
+      #   header:   
+      #   key1data: 'cnt_previa'
+      # 
+      #   # ...
+      #   align_header:  
+      #   border_header: 
+      #   
+      #   # sin borde para el dato...
+      #   align_data:  'C'
+      #   border_data: false  # true
+      
+      cell_4:
+        width:    15
+        header:   
+        key1data: 'cnt_actual'
+      
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  'C'
+        border_data: false  # true
+
+      # cell_5:
+      #   width:    20
+      #   header:   
+      #   key1data: 'diff'
+      # 
+      #   # ...
+      #   align_header:  
+      #   border_header: 
+      #   
+      #   # sin borde para el dato...
+      #   align_data:  'C'
+      #   border_data: false  # true
+
+      cell_6:
+        width:    30
+        header:   
+        key1data: 'valoriz'
+      
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  'C'
+        border_data: false  # true
+
+    group:
+
+  grid_6a: 
+    data:
+      # para hash...
+      callback1hash:  [ 'generarPdf', 'cbk_total1final' ]
+      
+      # para doctrine query...
+      # num de registros usados como limit...
+      n_limit: 100
+      callback1query: 
+      callback1count: 
+      
+    cell:
+      cell_1:
+        width: 190
+        header: # 'GRILLA DE TEST 01111'
+        key1data: 'dt_mensaje'
+    
+        # ...
+        align_header:  
+        border_header: 
+        
+        # sin borde para el dato...
+        align_data:  
+        border_data: false  # true
+        
+    group:
+  
+  # NO TIENE FIRMAS...
+  # ------------------
+  #  grid_5b:
+  #    data:
+  #      # para hash...
+  #      callback1hash:  [ 'generarPdf', 'cbk_firma' ]
+  #      
+  #      # para doctrine query...
+  #      # num de registros usados como limit...
+  #      n_limit: 100
+  #      callback1query: 
+  #      callback1count: 
+  #      
+  #    cell:
+  #      cell_1:
+  #        width: 190
+  #        header: # 'GRILLA DE TEST 02222!!!'
+  #        key1data: 'dt_mensaje'
+  #    
+  #        # ...
+  #        align_header:  
+  #        border_header: 
+  #        
+  #        # sin borde para el dato...
+  #        align_data:  
+  #        border_data: false # true
+  #  
+  #    group:
+  

@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Libraries\WrapTcpLib;
 use Com\Tecnick\Pdf\Tcpdf;
 use Illuminate\Http\Response;
+use App\Libraries\WrapTcpLib;
+use App\Libraries\Reports\ReportMin02;
 
 class ReporteController extends Controller
 {
@@ -76,7 +77,6 @@ class ReporteController extends Controller
     {
         // IMPORTANTE: no definir K_PATH_FONTS aquí. El TCPDF clásico se
         // autoconfigura a sus fuentes bundled (helvetica, etc.).
-
         $pdf = new WrapTcpLib('P', 'mm', 'A4', true, 'UTF-8');
 
         // Arma el reporte completo a partir del YAML.
@@ -90,4 +90,90 @@ class ReporteController extends Controller
             'Content-Disposition' => 'inline; filename="cursos.pdf"',
         ]);
     }
+
+    /**
+     * Genera el reporte de cursos usando WrapTcpLib (TCPDF clásico).
+     *
+     * Toda la definición del reporte está en el YAML
+     * app/config/report/multig_min02_a4p.yml y los datos en
+     * App\Libraries\Reports\ReportMin02
+     */
+    public function rpt_min02(): Response
+    {
+        // IMPORTANTE: no definir K_PATH_FONTS aquí. El TCPDF clásico se
+        // autoconfigura a sus fuentes bundled (helvetica, etc.).
+
+        // $pdf = new WrapTcpLib('P', 'mm', 'A4', true, 'UTF-8');
+        // 
+        // // Arma el reporte completo a partir del YAML.
+        // $pdf->ColoredTable('cursos.yml');
+        // 
+        // // 'S' devuelve el PDF como string (sin enviarlo directamente).
+        // $raw = $pdf->Output('cursos.pdf', 'S');
+
+        // ajusta el yaml de configuracion segun el listado...
+        // ----------------------------------------------------
+        $h_genPdf = array(
+          // para "configuracion" del listado...
+          'pg_size'        => 'A4',
+          'pg_orientation' => 'p',
+          'ycfg_file'      => $ycfg_file, 
+          // 
+          // - ORIGINAL, el destinatario sera un "archivo"...
+          // 'output_file'    => $uploaded_to . '/' . $tmp_file, // xdf => 'reporte'
+          // 'destination'    => 'F',
+          // 
+          // - xahora para TEST, 
+          // devuelve el PDF como string => 'S'
+          'output_file'    => 'rpt_min02',
+          //   - sin enviarlo directamente
+          'destination'    => 'S',
+          // 
+          'watermark'      => array( 
+            'active' => false,
+            'text'   => 'NO VALIDO - NO VALIDO - NO VALIDO - NO VALIDO',
+            'size'   => 20,
+            ),
+          // propios del "listado"...
+          'h_header'    => $h_header,
+          'h_estab'     => $h_estab,
+          'tag'         => $tag,
+          'anio'        => $anio_hasta,
+          'anio_previo' => $anio_hasta - 1,
+          // para hacer que la "cabecera" del "Grado", se corresponda con la modalidad del establecimiento...
+          'tipo_curso'  => $tipo_curso,
+          // 
+          // SE USA ESTE PARA "HARCODERAR" el año 2020 como "2021"...
+          // - SOLO para el boton 1
+          'anio_header' => $anio_header,
+          // 
+          // para proceso "largo"...
+          // - se usara para "ajustar" el numero de pagina de las que se vayan agregando...
+          'in_longproc' => true,
+          // 
+          // codigo del ultimo "establecimiento" del loop...
+          'cod_last1estab' => $cod_last1estab,
+          // 
+          // codigo del area...
+          'cod_area' => $cod_area,
+          // 
+          // para rectificativa...
+          'rectificativa' => $periodo,
+          'h_dt1area'     => $h_dt1area,
+          // 
+          // para detalle de cabecera en columna "aprobado_ant" y "pedido"
+          // - SOLO para 5to boton( min_pof_03 )...
+          'aprobado_anterior' => $aprobado_ant,
+          'aprobado_actual'   => $aprobado,
+          );
+        $genPdf = new ReportMin02($h_genPdf);
+        $raw    = $genPdf->generarImpresion();
+        
+        // ... 
+        return response($raw, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="rpt_min02.pdf"',
+        ]);
+    }
+
 }
