@@ -1,0 +1,102 @@
+# Configuración del reporte de cursos (prueba de WrapTcpLib + TCPDF clásico)
+# Lo carga WrapTcpLib::ColoredTable('cursos.yml')
+
+# Parámetros generales del documento
+config1default:
+  PDF_PAGE_FORMAT: A4
+  PDF_PAGE_ORIENTATION: P
+  PDF_CREATOR: "Lrvl_curso_reporte"
+  PDF_AUTHOR: "Sistema de Reportes"
+  PDF_HEADER_TITLE: "Reporte de Cursos"
+  PDF_HEADER_STRING: "Listado de cursos y nivel de aprobación"
+  PDF_HEADER_LOGO: ""          # sin logo (evita buscar una imagen inexistente)
+  PDF_HEADER_LOGO_WIDTH: 0
+  PDF_UNIT: mm
+  PDF_MARGIN_HEADER: 5
+  PDF_MARGIN_FOOTER: 10
+  PDF_MARGIN_TOP: 28
+  PDF_MARGIN_BOTTOM: 15
+  PDF_MARGIN_LEFT: 10
+  PDF_MARGIN_RIGHT: 10
+  PDF_FONT_NAME_MAIN: helvetica
+  PDF_FONT_SIZE_MAIN: 10
+  PDF_FONT_NAME_DATA: helvetica
+  PDF_FONT_SIZE_DATA: 8
+  PDF_FONT_MONOSPACED: courier
+  PDF_IMAGE_SCALE_RATIO: 4
+  PDF_TITLE: "Reporte de Cursos"
+  PDF_KEYWORDS: "cursos, reporte, aprobacion"
+  PDF_SUBJECT: "Reporte de cursos"
+
+# Márgenes (obligatorio según get_cfg4yaml)
+margin:
+  left: 10
+  top: 28
+  right: 10
+  bottom: 15
+  header: 5
+  footer: 10
+
+# Estilo de la cabecera de la tabla
+header1zone:
+  l1cell: true        # usa Cell() (una celda por columna)
+  min1height: 7
+  fillcolor: [ 200, 220, 255 ]
+  textcolor: 0
+  font: [ helvetica, B, 9 ]
+  drawcolor: [ 0, 0, 0 ]
+  linewidth: 0.2
+
+# Sin callback de pie de página -> usa el Footer() por defecto de TCPDF
+footer1zone: ~
+
+# Estilo de las filas de datos
+row1zone:
+  fillcolor: [ 240, 245, 255 ]   # color alterno de fondo
+  textcolor: 0
+  font: [ helvetica, '', 8 ]
+  drawcolor: [ 120, 120, 120 ]
+  linewidth: 0.1
+  l_fill: true                   # alterna fondo fila a fila
+
+group1zone: ~
+grid1zone: ~
+
+# Grillas del reporte (acá una sola: "cursos")
+grid:
+  cursos:
+    data:
+      # Fuente de datos: método que devuelve un array de filas
+      callback1hash: [ 'App\Libraries\Reports\CursoReportData', getCursos ]
+    cell:
+      col_id:
+        width: 18
+        key1data: id
+        header: "ID"
+        align_header: C
+        align_data: C
+      col_nombre:
+        width: 92
+        key1data: nombre
+        header: "Curso"
+        align_header: C
+        align_data: L
+      col_insc:
+        width: 30
+        key1data: inscriptos
+        header: "Inscriptos"
+        align_header: C
+        align_data: C
+      col_aprob:
+        width: 30
+        key1data: aprobados
+        header: "Aprobados"
+        align_header: C
+        align_data: C
+      col_pct:
+        width: 20
+        key1data: pct          # no existe en la fila -> se calcula por callback
+        header: "%"
+        align_header: C
+        align_data: C
+        callback: [ 'App\Libraries\Reports\CursoReportData', calcPorcentaje ]

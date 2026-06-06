@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Libraries\WrapTcpLib;
 use Com\Tecnick\Pdf\Tcpdf;
 use Illuminate\Http\Response;
 
@@ -15,6 +16,13 @@ class ReporteController extends Controller
      */
     public function test(): Response
     {
+        // tc-lib-pdf busca sus fuentes (.json/.z) en K_PATH_FONTS.
+        // Se define aquí (y no globalmente) para no chocar con el TCPDF
+        // clásico que usa WrapTcpLib. Las constantes define() son por-request.
+        if (! defined('K_PATH_FONTS')) {
+            define('K_PATH_FONTS', storage_path('fonts'));
+        }
+
         $fontFile = storage_path('fonts' . DIRECTORY_SEPARATOR . 'arial.json');
         if (! is_readable($fontFile)) {
             abort(500, "Falta la fuente. Ejecutá: php artisan pdf:import-font");
@@ -54,6 +62,32 @@ class ReporteController extends Controller
         return response($raw, 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="reporte_prueba.pdf"',
+        ]);
+    }
+
+    /**
+     * Genera el reporte de cursos usando WrapTcpLib (TCPDF clásico).
+     *
+     * Toda la definición del reporte está en el YAML
+     * app/config/report/cursos.yml y los datos en
+     * App\Libraries\Reports\CursoReportData.
+     */
+    public function cursos(): Response
+    {
+        // IMPORTANTE: no definir K_PATH_FONTS aquí. El TCPDF clásico se
+        // autoconfigura a sus fuentes bundled (helvetica, etc.).
+
+        $pdf = new WrapTcpLib('P', 'mm', 'A4', true, 'UTF-8');
+
+        // Arma el reporte completo a partir del YAML.
+        $pdf->ColoredTable('cursos.yml');
+
+        // 'S' devuelve el PDF como string (sin enviarlo directamente).
+        $raw = $pdf->Output('cursos.pdf', 'S');
+
+        return response($raw, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="cursos.pdf"',
         ]);
     }
 }

@@ -106,17 +106,72 @@ Se enlazó [INTEGRAR-TC-LIB.md](INTEGRAR-TC-LIB.md) desde el [README.md](README.
 
 ---
 
-## Estado final del proyecto
+## 5. Diagnóstico de la clase legacy WrapTcpLib
 
-- Documentación del proyecto en español ([README.md](README.md)).
-- Integración de tc-lib-pdf funcionando y documentada ([INTEGRAR-TC-LIB.md](INTEGRAR-TC-LIB.md)).
-- Endpoint de prueba `GET /reporte/test` operativo.
-- Comando `php artisan pdf:import-font` para gestionar fuentes.
+**Pedido:** _"se agrego la libreria WrapTcpLib como puedo testearla?"_
 
-## Próximo paso pendiente
+Se detectó que `app/Libraries/WrapTcpLib.php` es una clase **legacy portada de Symfony 1 + Doctrine 1 + TCPDF clásico**. Se determinó (y se verificó en runtime) que **no se podía testear tal como estaba**:
 
-Conectar la generación de PDF a **datos reales de la base** (modelos del dominio: `Curso`, `Alumno`, `Inscripcion`, etc.).
+- Extiende `tc-lib-pdf` pero usa la API del **TCPDF clásico** (`writeHTMLCell`, `Cell`, `SetFont`, `startTransaction`, etc.) → métodos inexistentes en tc-lib-pdf.
+- Depende de `sfYaml`, `sfException`, `Doctrine_Core` → no existen en Laravel.
+- Namespace `App\Http\Libraries` inconsistente con la ruta `app/Libraries/` (rompe PSR-4).
+- Bug: variable `$callback4query` inexistente.
+
+Se ofrecieron 3 opciones: (A) reutilizar con TCPDF clásico, (B) portar a tc-lib-pdf, (C) empezar limpio.
 
 ---
 
-_Generado a partir del trabajo realizado en la sesión del 2026-06-05._
+## 6. Migración de WrapTcpLib a TCPDF clásico (Opción A)
+
+**Pedido:** _"usemos la opcion A"_
+
+Se migró la clase para que corra sobre **`tecnickcom/tcpdf` (6.11.3)**:
+
+### Cambios en WrapTcpLib
+
+| Cambio | Detalle |
+|--------|---------|
+| Namespace | `App\Http\Libraries` → `App\Libraries` |
+| `extends` | `Com\Tecnick\Pdf\Tcpdf` → `\TCPDF` |
+| YAML | `sfYaml::load()` → `Symfony\Component\Yaml\Yaml::parseFile()` |
+| Excepción | `sfException` → `\RuntimeException` |
+| Bug | `$callback4query` → `$callback1query` (en `sc_grid()` y `sc_grp1query()`) |
+
+### Conflicto de fuentes resuelto
+
+tc-lib-pdf y TCPDF clásico comparten `K_PATH_FONTS` con formatos distintos. Se **quitó el define global** del [AppServiceProvider](app/Providers/AppServiceProvider.php) y se movió a [ReporteController::test()](app/Http/Controllers/ReporteController.php) (solo tc-lib). El TCPDF clásico se autoconfigura. Las constantes `define()` son por-request, así que no hay contaminación cruzada.
+
+### Archivos creados (harness de prueba)
+
+| Archivo | Rol |
+|---------|-----|
+| [app/config/report/cursos.yml](app/config/report/cursos.yml) | Configuración del reporte (estilos, columnas) |
+| [app/Libraries/Reports/CursoReportData.php](app/Libraries/Reports/CursoReportData.php) | Datos de ejemplo + columna calculada (% aprobación) |
+
+Más el método `cursos()` en el controlador y la ruta `GET /reporte/cursos`.
+
+### Verificación
+
+- Generación directa: PDF válido `%PDF-1.7`, ~8.9 KB, 1 página.
+- Corrió completo bajo el handler estricto de Laravel (sin notices).
+- HTTP real: `GET /reporte/cursos` → **200 OK**, `Content-Type: application/pdf`.
+
+📄 Documentado en [INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md), enlazado desde el [README.md](README.md).
+
+---
+
+## Estado final del proyecto
+
+- Documentación del proyecto en español ([README.md](README.md)).
+- **tc-lib-pdf** funcionando y documentado ([INTEGRAR-TC-LIB.md](INTEGRAR-TC-LIB.md)) → `GET /reporte/test`.
+- **WrapTcpLib + TCPDF clásico** migrado, funcionando y documentado ([INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md)) → `GET /reporte/cursos`.
+- Comando `php artisan pdf:import-font` para gestionar fuentes de tc-lib-pdf.
+
+## Próximos pasos pendientes
+
+1. Conectar la generación de PDF a **datos reales de la base** (modelos del dominio: `Curso`, `Alumno`, `Inscripcion`, etc.).
+2. Portar el path de datos de WrapTcpLib por `callback1query` (Doctrine) a **Eloquent**.
+
+---
+
+_Generado a partir del trabajo realizado en la sesión (2026-06-05 / 2026-06-06)._

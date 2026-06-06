@@ -32,7 +32,7 @@ Aplicación web construida con **Laravel 12**. El proyecto está pensado como ba
 | Base de datos     | SQLite (por defecto)                |
 | Frontend / build  | Vite 7                              |
 | CSS               | Tailwind CSS 4                       |
-| Reportes PDF      | tc-lib-pdf 8 ([guía de integración](INTEGRAR-TC-LIB.md)) |
+| Reportes PDF      | tc-lib-pdf 8 ([guía](INTEGRAR-TC-LIB.md)) · TCPDF 6 / WrapTcpLib ([guía](INTEGRAR-WRAPTCPLIB.md)) |
 | HTTP cliente JS   | Axios                               |
 | Cola / Cache / Sesión | driver `database`               |
 | REPL              | Laravel Tinker                      |
@@ -234,18 +234,24 @@ npm run build    # build de producción
 
 ## Reportes en PDF
 
-El proyecto integra **[tc-lib-pdf](https://github.com/tecnickcom/tc-lib-pdf)** para generar reportes en PDF. La integración (constante `K_PATH_FONTS`, comando de importación de fuentes, controlador y ruta de prueba) está documentada en detalle en:
+El proyecto integra **dos** librerías de generación de PDF, cada una con su guía:
 
-📄 **[INTEGRAR-TC-LIB.md](INTEGRAR-TC-LIB.md)**
+| Librería | Para qué | Endpoint | Guía |
+|----------|----------|----------|------|
+| **tc-lib-pdf** 8 | API moderna OO (HTML, tablas) | `/reporte/test` | 📄 [INTEGRAR-TC-LIB.md](INTEGRAR-TC-LIB.md) |
+| **TCPDF** 6 + `WrapTcpLib` | Reporteador legacy por YAML (grillas, grupos, cabecera/pie, marca de agua) | `/reporte/cursos` | 📄 [INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md) |
+
+> Ambas comparten la constante global `K_PATH_FONTS` con formatos de fuente distintos; por eso **no** se define globalmente sino dentro de cada controlador. Ver detalle en las guías.
 
 Prueba rápida:
 
 ```bash
-php artisan pdf:import-font   # Importa una fuente (solo la primera vez)
+php artisan pdf:import-font   # Solo para tc-lib-pdf (importa una fuente, 1ra vez)
 php artisan serve             # Levanta el servidor
 ```
 
-Luego visitar **http://localhost:8000/reporte/test** para ver un PDF de ejemplo.
+- **tc-lib-pdf:** http://localhost:8000/reporte/test
+- **WrapTcpLib (TCPDF):** http://localhost:8000/reporte/cursos
 
 ---
 
