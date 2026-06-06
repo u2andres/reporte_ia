@@ -1429,7 +1429,7 @@ class WrapTcpLib extends TCPDF
   { // inicializa con yml...
     if ( is_null($dir1yaml) )
     {
-      $dir1yaml = dirname(__FILE__).'/../config/report/';
+      $dir1yaml = dirname(__FILE__).'/config/report/';
     }
 
     if ( is_null($watermark) )
