@@ -70,7 +70,7 @@ class ReporteController extends Controller
      * Genera el reporte de cursos usando WrapTcpLib (TCPDF clásico).
      *
      * Toda la definición del reporte está en el YAML
-     * app/config/report/cursos.yml y los datos en
+     * app/Libraries/config/report/cursos.yml y los datos en
      * App\Libraries\Reports\CursoReportData.
      */
     public function cursos(): Response
@@ -79,12 +79,13 @@ class ReporteController extends Controller
         // autoconfigura a sus fuentes bundled (helvetica, etc.).
         $pdf = new WrapTcpLib('P', 'mm', 'A4', true, 'UTF-8');
 
+        // Directorio de los YAML de reportes (explícito, para no depender
+        // del default interno de WrapTcpLib).
+        $dirYaml = app_path('Libraries' . DIRECTORY_SEPARATOR . 'config'
+            . DIRECTORY_SEPARATOR . 'report') . DIRECTORY_SEPARATOR;
+
         // Arma el reporte completo a partir del YAML.
-        /**
-         * ir al yaml de configuracion :
-           - C:\eid\Xampp_82\htdocs\desarrollo\Lrvl_curso_reporte\app\Libraries\config\report\cursos.yml
-         */
-        $pdf->ColoredTable('cursos.yml');
+        $pdf->ColoredTable('cursos.yml', false, $dirYaml);
 
         // 'S' devuelve el PDF como string (sin enviarlo directamente).
         $raw = $pdf->Output('cursos.pdf', 'S');
@@ -96,16 +97,24 @@ class ReporteController extends Controller
     }
 
     /**
-     * Genera el reporte de cursos usando WrapTcpLib (TCPDF clásico).
+     * Genera el reporte de "Planta Completa Valorizada" (min_pof_02)
+     * usando el orquestador ReportMin02 sobre WrapTcpLib (TCPDF clásico).
      *
-     * Toda la definición del reporte está en el YAML
-     * app/config/report/multig_min02_a4p.yml y los datos en
-     * App\Libraries\Reports\ReportMin02
+     * Definición del reporte en el YAML
+     * app/Libraries/config/report/multig_min02_a4p.yml y los datos
+     * (mockeados) en App\Libraries\Reports\ReportMin02.
      */
     public function rpt_min02(): Response
     {
         // IMPORTANTE: no definir K_PATH_FONTS aquí. El TCPDF clásico se
         // autoconfigura a sus fuentes bundled (helvetica, etc.).
+
+        // El logo de la cabecera (mk_header) se busca en K_PATH_IMAGES.
+        // Se define aquí, apuntando a un directorio del proyecto, para no
+        // depender de vendor/ (que composer puede sobrescribir/borrar).
+        if (! defined('K_PATH_IMAGES')) {
+            define('K_PATH_IMAGES', resource_path('reports' . DIRECTORY_SEPARATOR . 'images') . DIRECTORY_SEPARATOR);
+        }
 
         // $pdf = new WrapTcpLib('P', 'mm', 'A4', true, 'UTF-8');
         // 

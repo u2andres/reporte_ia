@@ -47,6 +47,14 @@ ini_set('max_execution_time', 300);
 //      
 */
 
+// // ...
+// $h_test = array(
+//   // ...
+//   );
+// $c_val2ck = "\n" . '$h_test(0) : ' . print_r( $h_test, TRUE);
+// $c_file = dirname(__FILE__).'/../../../storage/logs/info-debug.txt';
+// file_put_contents( $c_file, $c_val2ck, FILE_APPEND);
+
 class ReportMin02
 {
   public function __construct($h_listado = array()) 

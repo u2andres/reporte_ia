@@ -23,6 +23,7 @@ Guía de la migración de la clase legacy **`WrapTcpLib`** para que funcione en 
 - [Estructura del YAML de configuración](#estructura-del-yaml-de-configuración)
 - [Cómo probar](#cómo-probar)
 - [Verificación realizada](#verificación-realizada)
+- [Segundo reporte: rpt_min02 (orquestador)](#segundo-reporte-rpt_min02-orquestador)
 - [Pendientes y advertencias](#pendientes-y-advertencias)
 
 ---
@@ -131,9 +132,14 @@ Para poder testear el reporteador se crearon tres piezas:
 
 | Archivo | Rol |
 |---------|-----|
-| [app/config/report/cursos.yml](app/config/report/cursos.yml) | Configuración del reporte (márgenes, estilos, columnas) |
+| [app/Libraries/config/report/cursos.yml](app/Libraries/config/report/cursos.yml) | Configuración del reporte (márgenes, estilos, columnas) |
 | [app/Libraries/Reports/CursoReportData.php](app/Libraries/Reports/CursoReportData.php) | Datos de ejemplo (5 cursos) + columna calculada (% aprobación) |
 | [app/Http/Controllers/ReporteController.php](app/Http/Controllers/ReporteController.php) | Método `cursos()` que arma y devuelve el PDF |
+
+> **Ubicación de los YAML:** los archivos de configuración viven en
+> `app/Libraries/config/report/`. El método pasa ese directorio explícitamente
+> a `ColoredTable()` (3er argumento) para no depender del default interno de
+> `WrapTcpLib`.
 
 Ruta: `GET /reporte/cursos` (nombre `reporte.cursos`).
 
@@ -143,8 +149,11 @@ El método del controlador es mínimo:
 public function cursos(): \Illuminate\Http\Response
 {
     $pdf = new WrapTcpLib('P', 'mm', 'A4', true, 'UTF-8');
-    $pdf->ColoredTable('cursos.yml');           // arma todo desde el YAML
-    $raw = $pdf->Output('cursos.pdf', 'S');     // 'S' = devolver como string
+
+    $dirYaml = app_path('Libraries/config/report') . DIRECTORY_SEPARATOR;
+    $pdf->ColoredTable('cursos.yml', false, $dirYaml);  // arma todo desde el YAML
+
+    $raw = $pdf->Output('cursos.pdf', 'S');             // 'S' = devolver como string
 
     return response($raw, 200, [
         'Content-Type'        => 'application/pdf',
@@ -173,7 +182,7 @@ Las **columnas calculadas** se resuelven así: si `key1data` no está en la fila
 
 ## Estructura del YAML de configuración
 
-Esquema usado por `get_cfg4yaml()` (ver [cursos.yml](app/config/report/cursos.yml) completo):
+Esquema usado por `get_cfg4yaml()` (ver [cursos.yml](app/Libraries/config/report/cursos.yml) completo):
 
 ```yaml
 config1default:   # metadatos y defaults del documento (formato, fuentes, márgenes)
@@ -224,6 +233,66 @@ Para forzar descarga en vez de mostrarlo, cambiar `inline` por `attachment` en e
 
 ---
 
+## Segundo reporte: rpt_min02 (orquestador)
+
+`rpt_min02` ("Planta Completa Valorizada", tag `min_pof_02`) es un reporte real, más complejo que `cursos`. A diferencia de `cursos` (que usa `WrapTcpLib` directo), introduce un **orquestador** que encapsula toda la configuración y los datos.
+
+### Piezas
+
+| Archivo | Rol |
+|---------|-----|
+| [app/Http/Controllers/ReporteController.php](app/Http/Controllers/ReporteController.php) (`rpt_min02()`) | Arma el array `$h_genPdf` (área, establecimiento, header) y delega en el orquestador |
+| [app/Libraries/Reports/ReportMin02.php](app/Libraries/Reports/ReportMin02.php) | Orquestador: crea `WrapTcpLib`, carga el YAML, define callbacks de header/footer y de cada grilla |
+| [app/Libraries/config/report/multig_min02_a4p.yml](app/Libraries/config/report/multig_min02_a4p.yml) | Configuración: cabecera variable + grillas de Conducción / Ejecución / Horas Cátedra + subtotales y total |
+| [resources/reports/images/logo_ciudad.png](resources/reports/images/logo_ciudad.png) | Logo de la cabecera |
+
+Ruta: `GET /reporte/min_02` (nombre `reporte.rpt_min02`).
+
+### Patrón orquestador
+
+El controlador **no** usa `WrapTcpLib` directamente: construye un hash de configuración y se lo pasa a `ReportMin02`, cuyo `generarImpresion()` hace el trabajo:
+
+```php
+$genPdf = new ReportMin02($h_genPdf);
+$raw    = $genPdf->generarImpresion();   // crea WrapTcpLib, carga YAML, devuelve string
+```
+
+Dentro de `generarImpresion()`:
+
+```php
+$pdf = new WrapTcpLib($orientation, 'mm', $pg_size, true, 'UTF-8', false);
+$pdf->gst_huser($this->h_listado);                       // expone la config a los callbacks
+$dir1yaml  = dirname(__FILE__) . '/../config/report/';   // -> app/Libraries/config/report/
+$ycfg_file = 'multig_min02_a4p.yml';                     // se arma según pg_size+orientation
+$pdf->ColoredTable($ycfg_file, $prelim, $dir1yaml, $watermark);
+return $pdf->Output($output_file . '.pdf', 'S');
+```
+
+Los **callbacks** del YAML (`mk_header`, `mk_footer`, `cbk_conduccion`, `cbk_total`, etc.) son métodos estáticos de `ReportMin02`, referenciados como `[ 'App\Libraries\Reports\ReportMin02', 'metodo' ]`. Acceden a la configuración con `$pdf->gst_huser(null, 'clave')`.
+
+### Datos mockeados
+
+Las consultas originales a `PofPTable` (Doctrine) están **comentadas** y reemplazadas por datos fijos vía `json_decode()` dentro de cada `cbk_*`. Esto permite probar el layout sin base de datos. Para datos reales habría que reemplazar esos mocks por consultas Eloquent.
+
+### Logo y K_PATH_IMAGES
+
+`mk_header()` imprime un logo con `$pdf->Image(K_PATH_IMAGES . $headerdata['logo'], ...)`. Para no depender de `vendor/` (que composer puede borrar), el logo se movió a `resources/reports/images/` y el controlador define la constante **antes** de instanciar el reporte:
+
+```php
+if (! defined('K_PATH_IMAGES')) {
+    define('K_PATH_IMAGES', resource_path('reports/images') . DIRECTORY_SEPARATOR);
+}
+```
+
+> Es importante que esta definición ocurra **antes** de crear `WrapTcpLib` (que carga TCPDF, el cual autoconfigura `K_PATH_IMAGES` a `vendor/.../tcpdf/` si no está definida). Como las constantes `define()` son por-request, no hay contaminación entre endpoints.
+
+### Verificación
+
+- Aislado (= request real): **49.189 bytes**, `%PDF-1.7`, con logo cargado desde `resources/reports/images/`.
+- HTTP real `GET /reporte/min_02`: **200 OK**, `application/pdf`. Verificado que tras pegarle a `/reporte/cursos` en el mismo worker, `min_02` sigue trayendo el logo (constantes por-request, sin filtración).
+
+---
+
 ## Pendientes y advertencias
 
 - **Path de datos por Doctrine NO portado.** La fuente de datos vía `callback1query` (paginación con `Doctrine_Core::HYDRATE_ARRAY`, en `sc_callback1row()` y `sc_grp1query()`) sigue sin migrar. El camino funcional es **`callback1hash`** (devuelve un array de filas). Para datos reales, reemplazar ese branch por Eloquent, por ejemplo:
@@ -238,6 +307,10 @@ Para forzar descarga en vez de mostrarlo, cambiar `inline` por `attachment` en e
 - **Avisos del IDE** sobre "Property ... has no type information": son informativos (la clase legacy no declara tipos), no son errores.
 
 - **Marca de agua / preliminar:** `ColoredTable($yaml, $l_prelim = true)` activa la marca de agua "NO VALIDO". No se probó en este harness.
+
+- **Refs legacy en código muerto de `ReportMin02`:** `myllongprocActions::gst_hget1tag()` (solo en el branch `in_longproc = true`, que está en `false`) y los métodos `get_cnt1data()` / `cbk_firma()` (no referenciados desde el YAML). No afectan la ejecución actual, pero romperían si se activan. Habría que portarlos antes de usar "procesos largos" (multi-establecimiento) o las firmas.
+
+- **Datos mockeados en `ReportMin02`:** los `cbk_*` devuelven JSON fijo en lugar de consultar la base. Reemplazar por Eloquent para datos reales.
 
 ---
 

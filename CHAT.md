@@ -160,18 +160,44 @@ Más el método `cursos()` en el controlador y la ruta `GET /reporte/cursos`.
 
 ---
 
+## 7. Reporte rpt_min02 (orquestador ReportMin02)
+
+**Pedido:** _"se agrego el reporte rpt_min02"_
+
+El usuario agregó un reporte real más complejo:
+
+- Clase orquestadora [app/Libraries/Reports/ReportMin02.php](app/Libraries/Reports/ReportMin02.php) (envuelve `WrapTcpLib`).
+- YAML [app/Libraries/config/report/multig_min02_a4p.yml](app/Libraries/config/report/multig_min02_a4p.yml) (grillas de Conducción / Ejecución / Horas Cátedra + subtotales/total).
+- Método `rpt_min02()` en el controlador y ruta `GET /reporte/min_02`.
+- Datos **mockeados** (json_decode) reemplazando las consultas a `PofPTable` (Doctrine).
+
+Se verificó que **funciona sin cambios** sobre la infraestructura ya migrada: PDF válido de ~49 KB, **200 OK** por HTTP.
+
+### Arreglos aplicados (a, b, c)
+
+1. **a) `/reporte/cursos`** — se hizo que `cursos()` pase el directorio del YAML explícitamente (`app/Libraries/config/report/`), para no depender del default interno de `WrapTcpLib` (que ya había cambiado). El endpoint ya funcionaba, pero quedó robusto.
+
+2. **b) Logo robusto** — se movió `logo_ciudad.png` de `vendor/tecnickcom/tcpdf/` (que composer puede borrar) a [resources/reports/images/](resources/reports/images/), y `rpt_min02()` define `K_PATH_IMAGES` apuntando ahí **antes** de instanciar el reporte. Verificado que no hay filtración de constantes entre requests (cursos → min_02 sigue trayendo el logo).
+
+3. **c) Documentación** — se documentó `rpt_min02` (patrón orquestador, datos mockeados, logo/K_PATH_IMAGES) en [INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md), corrigiendo además las rutas de YAML que habían quedado viejas (`app/config/report/` → `app/Libraries/config/report/`).
+
+---
+
 ## Estado final del proyecto
 
 - Documentación del proyecto en español ([README.md](README.md)).
 - **tc-lib-pdf** funcionando y documentado ([INTEGRAR-TC-LIB.md](INTEGRAR-TC-LIB.md)) → `GET /reporte/test`.
-- **WrapTcpLib + TCPDF clásico** migrado, funcionando y documentado ([INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md)) → `GET /reporte/cursos`.
+- **WrapTcpLib + TCPDF clásico** migrado, funcionando y documentado ([INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md)):
+  - `GET /reporte/cursos` (reporte simple, datos de ejemplo).
+  - `GET /reporte/min_02` (reporte real "Planta Completa Valorizada", orquestador `ReportMin02`, datos mockeados).
 - Comando `php artisan pdf:import-font` para gestionar fuentes de tc-lib-pdf.
 
 ## Próximos pasos pendientes
 
 1. Conectar la generación de PDF a **datos reales de la base** (modelos del dominio: `Curso`, `Alumno`, `Inscripcion`, etc.).
-2. Portar el path de datos de WrapTcpLib por `callback1query` (Doctrine) a **Eloquent**.
+2. Portar el path de datos de WrapTcpLib por `callback1query` (Doctrine) a **Eloquent**, y reemplazar los mocks `json_decode` de `ReportMin02` por consultas reales.
+3. Portar el código legacy en desuso de `ReportMin02` (`mylongprocActions`, `get_cnt1data`, `cbk_firma`) si se necesitan procesos largos o firmas.
 
 ---
 
-_Generado a partir del trabajo realizado en la sesión (2026-06-05 / 2026-06-06)._
+_Generado a partir del trabajo realizado en la sesión (2026-06-05 → 2026-06-07)._
