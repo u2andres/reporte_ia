@@ -80,6 +80,10 @@ class ReporteController extends Controller
         $pdf = new WrapTcpLib('P', 'mm', 'A4', true, 'UTF-8');
 
         // Arma el reporte completo a partir del YAML.
+        /**
+         * ir al yaml de configuracion :
+           - C:\eid\Xampp_82\htdocs\desarrollo\Lrvl_curso_reporte\app\Libraries\config\report\cursos.yml
+         */
         $pdf->ColoredTable('cursos.yml');
 
         // 'S' devuelve el PDF como string (sin enviarlo directamente).
@@ -113,6 +117,105 @@ class ReporteController extends Controller
 
         // ajusta el yaml de configuracion segun el listado...
         // ----------------------------------------------------
+        /**
+         * ir al yaml de configuracion :
+           - C:\eid\Xampp_82\htdocs\desarrollo\Lrvl_curso_reporte\app\Libraries\config\report\multig_min02_a4p.yml
+         */
+        
+        // ...        
+        $ycfg_file = 'multig_min02';
+
+        // // adultos...
+        // $area           = 'Adultos';
+        // $tag            = 'min_pof_02';
+        // $anio           = 2020;
+        // $anio_previo    = 2019;
+        // $tipo_curso     = 'Ciclo / Curso';
+        // $anio_header    = 2025;
+        // $in_longproc    = false;
+        // $cod_last1estab = 270;
+        // $cod_area       = 'A';
+        // $rectificativa  = '';
+
+        // gestion privada...
+        $area           = 'Gestión Privada';
+        $tag            = 'min_pof_02';
+        $anio           = 2020;
+        $anio_previo    = 2019;
+        $tipo_curso     = 'Curso';
+        $anio_header    = 2025;
+        $in_longproc    = false;
+        $cod_last1estab = 1400;
+        $cod_area       = 'D';
+        
+        $rectificativa  = '';
+        $periodo        = '';
+
+        // header : 
+        // - 2 columnas y 4 renglones => seran : 1l/1r, ..., 4l/4r
+        $det_periodo = 'Pof al 06/06/2026';
+        $h_header    = array(
+          'l1' => 'MINISTERIO DE EDUCACIÓN',
+          'l2' => 'SUBSECRETARIA DE GESTIÓN ECONÓMICO FINANCIERA Y ADMINISTRACIÓN DE RECURSOS',
+          'l3' => 'DIRECCIÓN GENERAL DE ADMINISTRACIÓN DE RECURSOS',
+          'l4' => '',
+          'r1' => array('detail' => '<strong>' . 'Área: ' . $area . '</strong>', 'toleft' => 60),
+          'r2' => 'Planta Completa Valorizada',
+          'r3' => '<strong>' . 'Año '. $anio_header . '</strong>',
+          'r4' => array( 'detail' => '<strong>' . $det_periodo . '</strong>', 'toleft' => 250),
+          );
+        
+        // datos del establecimiento...
+        // - en adultos(A)
+        // $h_estab = array(
+        //    'id'             => 270,
+        //    'nombre'         => 'DIRECCIÓN DEL ÁREA DEL ADULTO Y DEL ADOLESCENTE',
+        //    'cue'            => '',
+        //    'escuela'        => '',
+        //    'direccion'      => 'CARLOS H PERETTE 770, 3º PISO, EDIFICIO WALSH',
+        //    'codigo'         => 270,
+        //    'cod_modalidad'  => 4,
+        //    'modalidad'      => 'Nivel Primario Adultos',
+        //    'cod_area'       => 'A',
+        //    'area'           => 'Adultos',
+        //    'cod_tipo_curso' => 13,
+        //    'tipo_curso'     => 'Ciclo / Curso',
+        //    'cod_de'         => 1,
+        //    'de'             => 1,
+        //    );
+        // 
+        // // ...
+        // $h_dt1area = array(
+        //   270,
+        //   );
+
+        // - en gestion privada(D)
+        $h_estab = array(
+           'id'             => 1400,
+           'nombre'         => 'SUPERVISION GESTION PRIVADA',
+           'cue'            => '999999',
+           'escuela'        => '99',
+           'direccion'      => 'CARLOS H PERETTE 770, 4º PISO',
+           'codigo'         => 1400,
+           'cod_modalidad'  => 74,
+           'modalidad'      => 'Supervisión',
+           'cod_area'       => 'D',
+           'area'           => 'Gestión Privada',
+           'cod_tipo_curso' => 10,
+           'tipo_curso'     => 'Curso',
+           'cod_de'         => 9,
+           'de'             => 9,
+           );
+
+        // ...
+        $h_dt1area = array(
+          1400,
+          );
+        
+        $aprobado_ant = null;
+        $aprobado     = null;
+        
+        // ...
         $h_genPdf = array(
           // para "configuracion" del listado...
           'pg_size'        => 'A4',
@@ -138,8 +241,8 @@ class ReporteController extends Controller
           'h_header'    => $h_header,
           'h_estab'     => $h_estab,
           'tag'         => $tag,
-          'anio'        => $anio_hasta,
-          'anio_previo' => $anio_hasta - 1,
+          'anio'        => $anio,
+          'anio_previo' => $anio_previo,
           // para hacer que la "cabecera" del "Grado", se corresponda con la modalidad del establecimiento...
           'tipo_curso'  => $tipo_curso,
           // 
@@ -149,7 +252,8 @@ class ReporteController extends Controller
           // 
           // para proceso "largo"...
           // - se usara para "ajustar" el numero de pagina de las que se vayan agregando...
-          'in_longproc' => true,
+          // - xahora en false => NO HAY MULTIPLES ESTABLECIMIENTOS...
+          'in_longproc' => false,
           // 
           // codigo del ultimo "establecimiento" del loop...
           'cod_last1estab' => $cod_last1estab,

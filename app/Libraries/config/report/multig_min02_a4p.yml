@@ -24,7 +24,7 @@ config1default:
   # image logo
   PDF_HEADER_LOGO: "logo_ciudad.png"
   # header logo image width [mm]
-  PDF_HEADER_LOGO_WIDTH: 15,
+  PDF_HEADER_LOGO_WIDTH: 15
   # document unit of measure [pt=point, mm=millimeter, cm=centimeter, in=inch]
   PDF_UNIT: "mm"
   # 
@@ -95,7 +95,7 @@ pre1zone:
 # -----------------------
 # - tiene SOLO un callback para ejecutar "despues" de finalizr el reporte...
 post1zone:
-  callback: [ 'generarPdf', 'hd_end1report' ]
+  callback: [ 'App\Libraries\Reports\ReportMin02', 'hd_end1report' ]
   
 # zona de cabecera...
 header1zone:
@@ -119,7 +119,7 @@ header1zone:
   linewidth:  0.1
   font:       [ 'times', 'B', 8 ]
   
-  callback: [ 'generarPdf', 'mk_header' ]
+  callback: [ 'App\Libraries\Reports\ReportMin02', 'mk_header' ]
 
   # grilla("libre") "asociada"...
   grid:
@@ -128,7 +128,7 @@ header1zone:
     grid_1: 
       data:
         # para hash...
-        callback1hash:  [ 'generarPdf', 'cbk_estab' ]
+        callback1hash:  [ 'App\Libraries\Reports\ReportMin02', 'cbk_estab' ]
         
         # para doctrine query...
         # num de registros usados como limit...
@@ -154,7 +154,7 @@ header1zone:
 
 # zona de pie...
 footer1zone:
-  callback: [ 'generarPdf', 'mk_footer' ]
+  callback: [ 'App\Libraries\Reports\ReportMin02', 'mk_footer' ]
   
 # zona de filas...
 row1zone:
@@ -175,7 +175,7 @@ group1zone:
 
 # zona de grillas...
 grid1zone:
-  callback:  # [ 'generarPdf', 'cbk_ft1detalle' ]
+  callback:  # [ 'App\Libraries\Reports\ReportMin02', 'cbk_ft1detalle' ]
 
 # ------------------------------------------------------
 # B) DESDE ACA CONFIGURACION P/C/"GRILLA" DEL LISTADO...
@@ -187,7 +187,7 @@ grid:
   # grid_1: 
   #   data:
   #     # para hash...
-  #     callback1hash:  [ 'generarPdf', 'cbk_estab' ]
+  #     callback1hash:  [ 'App\Libraries\Reports\ReportMin02', 'cbk_estab' ]
   #     
   #     # para doctrine query...
   #     # num de registros usados como limit...
@@ -216,7 +216,7 @@ grid:
   grid_2a: 
     data:
       # para hash...
-      callback1hash:  [ 'generarPdf', 'cbk_head1conduccion' ]
+      callback1hash:  [ 'App\Libraries\Reports\ReportMin02', 'cbk_head1conduccion' ]
       
       # para doctrine query...
       # num de registros usados como limit...
@@ -243,7 +243,7 @@ grid:
   grid_2b: 
     data:
       # para hash...
-      callback1hash:  [ 'generarPdf', 'cbk_conduccion' ]
+      callback1hash:  [ 'App\Libraries\Reports\ReportMin02', 'cbk_conduccion' ]
       
       # para doctrine query...
       # num de registros usados como limit...
@@ -293,7 +293,7 @@ grid:
       
       cell_4:
         width:    15
-        header:   %anio_header%
+        header:   '%anio_header%'
         key1data: 'cnt_actual'
       
         # ...
@@ -335,7 +335,7 @@ grid:
   grid_2c: 
     data:
       # para hash...
-      callback1hash:  [ 'generarPdf', 'cbk_subt1conduccion' ]
+      callback1hash:  [ 'App\Libraries\Reports\ReportMin02', 'cbk_subt1conduccion' ]
       
       # para doctrine query...
       # num de registros usados como limit...
@@ -429,7 +429,7 @@ grid:
   grid_3a: 
     data:
       # para hash...
-      callback1hash:  [ 'generarPdf', 'cbk_head1ejecucion' ]
+      callback1hash:  [ 'App\Libraries\Reports\ReportMin02', 'cbk_head1ejecucion' ]
       
       # para doctrine query...
       # num de registros usados como limit...
@@ -456,7 +456,7 @@ grid:
   grid_3b: 
     data:
       # para hash...
-      callback1hash:  [ 'generarPdf', 'cbk_ejecucion' ]
+      callback1hash:  [ 'App\Libraries\Reports\ReportMin02', 'cbk_ejecucion' ]
       
       # para doctrine query...
       # num de registros usados como limit...
@@ -506,7 +506,7 @@ grid:
       
       cell_4:
         width:    15
-        header:   %anio_header%
+        header:   '%anio_header%'
         key1data: 'cnt_actual'
       
         # ...
@@ -548,7 +548,7 @@ grid:
   grid_3c: 
     data:
       # para hash...
-      callback1hash:  [ 'generarPdf', 'cbk_subt1ejecucion' ]
+      callback1hash:  [ 'App\Libraries\Reports\ReportMin02', 'cbk_subt1ejecucion' ]
       
       # para doctrine query...
       # num de registros usados como limit...
@@ -642,7 +642,7 @@ grid:
   grid_4a: 
     data:
       # para hash...
-      callback1hash:  [ 'generarPdf', 'cbk_head1hcatedra' ]
+      callback1hash:  [ 'App\Libraries\Reports\ReportMin02', 'cbk_head1hcatedra' ]
       
       # para doctrine query...
       # num de registros usados como limit...
@@ -669,7 +669,7 @@ grid:
   grid_4b: 
     data:
       # para hash...
-      callback1hash:  [ 'generarPdf', 'cbk_hcatedra' ]
+      callback1hash:  [ 'App\Libraries\Reports\ReportMin02', 'cbk_hcatedra' ]
       
       # para doctrine query...
       # num de registros usados como limit...
@@ -719,7 +719,7 @@ grid:
       
       cell_4:
         width:    15
-        header:   %anio_header%
+        header:   '%anio_header%'
         key1data: 'cnt_actual'
       
         # ...
@@ -761,7 +761,7 @@ grid:
   grid_4c: 
     data:
       # para hash...
-      callback1hash:  [ 'generarPdf', 'cbk_subt1hcatedra' ]
+      callback1hash:  [ 'App\Libraries\Reports\ReportMin02', 'cbk_subt1hcatedra' ]
       
       # para doctrine query...
       # num de registros usados como limit...
@@ -853,7 +853,7 @@ grid:
   grid_5a: 
     data:
       # para hash...
-      callback1hash:  [ 'generarPdf', 'cbk_total' ]
+      callback1hash:  [ 'App\Libraries\Reports\ReportMin02', 'cbk_total' ]
       
       # para doctrine query...
       # num de registros usados como limit...
@@ -945,7 +945,7 @@ grid:
   grid_6a: 
     data:
       # para hash...
-      callback1hash:  [ 'generarPdf', 'cbk_total1final' ]
+      callback1hash:  [ 'App\Libraries\Reports\ReportMin02', 'cbk_total1final' ]
       
       # para doctrine query...
       # num de registros usados como limit...
@@ -974,7 +974,7 @@ grid:
   #  grid_5b:
   #    data:
   #      # para hash...
-  #      callback1hash:  [ 'generarPdf', 'cbk_firma' ]
+  #      callback1hash:  [ 'App\Libraries\Reports\ReportMin02', 'cbk_firma' ]
   #      
   #      # para doctrine query...
   #      # num de registros usados como limit...

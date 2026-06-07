@@ -12,3 +12,6 @@ Route::get('/reporte/test', [ReporteController::class, 'test'])->name('reporte.t
 
 // Reporte de cursos con WrapTcpLib (TCPDF clásico)
 Route::get('/reporte/cursos', [ReporteController::class, 'cursos'])->name('reporte.cursos');
+
+// Reporte de wsad(Planta Completa Valorizada), con WrapTcpLib (TCPDF clásico)
+Route::get('/reporte/min_02', [ReporteController::class, 'rpt_min02'])->name('reporte.rpt_min02');
