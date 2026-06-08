@@ -24,7 +24,7 @@ Guía de la migración de la clase legacy **`WrapTcpLib`** para que funcione en 
 - [Cómo probar](#cómo-probar)
 - [Verificación realizada](#verificación-realizada)
 - [Segundo reporte: rpt_min02 (orquestador)](#segundo-reporte-rpt_min02-orquestador)
-- [Capa de datos: modelos Eloquent y MySQL real (A + B + C)](#capa-de-datos-modelos-eloquent-y-mysql-real-a--b--c)
+- [Capa de datos: Eloquent, MySQL real y parametrización (A + B + C + D)](#capa-de-datos-eloquent-mysql-real-y-parametrización-a--b--c--d)
 - [Pendientes y advertencias](#pendientes-y-advertencias)
 
 ---
@@ -273,7 +273,7 @@ Los **callbacks** del YAML (`mk_header`, `mk_footer`, `cbk_conduccion`, `cbk_tot
 
 ### Datos: de mocks a Eloquent
 
-Originalmente los `cbk_*` devolvían datos fijos vía `json_decode()` (mocks de las consultas Doctrine `PofPTable`). **Ahora consultan la base de datos** mediante métodos Eloquent en el modelo `PofP` — ver [Capa de datos](#capa-de-datos-modelos-eloquent-y-mysql-real-a--b--c). Los `$json_mock` quedaron **comentados** como referencia del formato esperado.
+Originalmente los `cbk_*` devolvían datos fijos vía `json_decode()` (mocks de las consultas Doctrine `PofPTable`). **Ahora consultan la base de datos** mediante métodos Eloquent en el modelo `PofP` — ver [Capa de datos](#capa-de-datos-eloquent-mysql-real-y-parametrización-a--b--c--d). Los `$json_mock` quedaron **comentados** como referencia del formato esperado.
 
 ### Logo y K_PATH_IMAGES
 
@@ -294,9 +294,9 @@ if (! defined('K_PATH_IMAGES')) {
 
 ---
 
-## Capa de datos: modelos Eloquent y MySQL real (A + B + C)
+## Capa de datos: Eloquent, MySQL real y parametrización (A + B + C + D)
 
-Para que `rpt_min02` deje de usar mocks y consulte datos reales, se mapearon las tablas legacy (Doctrine 1.2) a modelos Eloquent (A), se portaron las consultas (B) y se conectó a la base MySQL real vía una conexión dedicada (C).
+Para que `rpt_min02` deje de usar mocks y consulte datos reales, se mapearon las tablas legacy (Doctrine 1.2) a modelos Eloquent (A), se portaron las consultas (B), se conectó a la base MySQL real vía una conexión dedicada (C) y se parametrizó el reporte por establecimiento/año (D).
 
 ### A) Modelos, migraciones y seeder
 
@@ -364,6 +364,41 @@ En el esquema Doctrine original estas tablas vivían en una conexión aparte (`c
 Probado contra una base real (MariaDB 10.1): conexión OK, las 5 tablas existen (`680_POF_P` ~33.7k filas) y las columnas coinciden con el mapeo. El reporte `GET /reporte/min_02` para el establecimiento 1400 / año 2020 trae **11 cargos de Conducción reales** (suma 90) y genera el PDF (`200 OK`, ~49 KB).
 
 > ⚠️ **MariaDB/MySQL viejo:** la introspección de esquema de Laravel (`getColumnListing`, `migrate`, `db:show` sobre la conexión `doctrine`) falla por la columna `generation_expression` (sólo existe en MySQL 5.7+). **No afecta las consultas de datos** del reporte (SELECT/WHERE/aggregates normales); simplemente no usar comandos de *schema* contra `doctrine`.
+
+### D) Reporte parametrizado (`estab` y `anio`)
+
+El reporte ya no está fijo a un establecimiento/año. La ruta `reporte.rpt_min02` declara dos **parámetros opcionales de ruta**, y el controlador `rpt_min02(Request $request, $estab = null, $anio = null)` también acepta los mismos por **query string** como fallback:
+
+```php
+// routes/web.php
+Route::get('/reporte/min_02/{estab?}/{anio?}', [ReporteController::class, 'rpt_min02'])
+    ->name('reporte.rpt_min02');
+```
+
+| Parámetro | Significado | Default |
+|-----------|-------------|---------|
+| `estab` | código de establecimiento (`680_POF_P.c680_658_id` / PK de `658_*`) | `1400` |
+| `anio`  | año de la POF (`c680_anio`) | `2020` |
+
+```
+GET /reporte/min_02                        -> estab 1400, año 2020
+GET /reporte/min_02/3510                    -> estab 3510, año 2020 (anio default)
+GET /reporte/min_02/3510/2019               -> estab 3510, año 2019
+GET /reporte/min_02?estab=3510&anio=2020    -> equivalente, por query string
+```
+
+En Blade/código: `route('reporte.rpt_min02', ['estab' => 3510, 'anio' => 2020])`.
+
+Flujo:
+
+1. Resuelve `estab`/`anio`: primero parámetro de ruta, luego query string, luego defaults (`$estab ?? $request->query('estab', 1400)`).
+2. Busca el establecimiento real: `EstablecimientoPofP::find($estab)`. Si no existe → **HTTP 404**.
+3. Arma `$h_estab` con los datos reales del registro (nombre, CUE, escuela, dirección, etc.) y deriva `cod_area`, `anio_previo = anio - 1`, `anio_header = anio`, `cod_last1estab = estab`, `h_dt1area = [estab]`.
+4. El archivo se nombra `rpt_min02_<estab>_<anio>.pdf`.
+
+Verificado por HTTP: `/reporte/min_02` y `/reporte/min_02/1400/2020` → 200 (~49 KB); `/reporte/min_02/3510` y `/reporte/min_02/3510/2020` (156 filas, C/E/H) → 200 (~62 KB); query string equivalente → 200; `/reporte/min_02/999999999` → **404**.
+
+> **Limitación (cosmética, no de datos):** los **datos numéricos** son correctos para cualquier estab/año, pero algunos campos **descriptivos** del encabezado no tienen tabla de nombres modelada: **Área** usa un mapa best-effort (`A`→Adultos, `D`→Gestión Privada; resto muestra "Área &lt;letra&gt;"), **Modalidad** muestra el código (falta catálogo 664) y **D.E.** muestra el `distrito_escolar_id`. Para nombres completos habría que modelar las tablas de catálogo (Área 650, Modalidad 664, Distrito 657) y resolverlos por join.
 
 ---
 

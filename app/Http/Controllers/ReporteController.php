@@ -6,6 +6,8 @@ use Com\Tecnick\Pdf\Tcpdf;
 use Illuminate\Http\Response;
 use App\Libraries\WrapTcpLib;
 use App\Libraries\Reports\ReportMin02;
+use App\Models\EstablecimientoPofP;
+use Illuminate\Http\Request;
 
 class ReporteController extends Controller
 {
@@ -104,7 +106,7 @@ class ReporteController extends Controller
      * app/Libraries/config/report/multig_min02_a4p.yml y los datos
      * (mockeados) en App\Libraries\Reports\ReportMin02.
      */
-    public function rpt_min02(): Response
+    public function rpt_min02(Request $request, $estab = null, $anio = null): Response
     {
         // IMPORTANTE: no definir K_PATH_FONTS aquí. El TCPDF clásico se
         // autoconfigura a sus fuentes bundled (helvetica, etc.).
@@ -132,31 +134,33 @@ class ReporteController extends Controller
          */
         
         // ...        
-        $ycfg_file = 'multig_min02';
+        // ----------------------------------------------------------------
+        // Parámetros estab/anio: por ruta (/reporte/min_02/{estab}/{anio})
+        // o por query string (?estab=&anio=). Defaults: 1400 / 2020.
+        // ----------------------------------------------------------------
+        $estab = (int) ($estab ?? $request->query('estab', 1400));
+        $anio  = (int) ($anio  ?? $request->query('anio', 2020));
 
-        // // adultos...
-        // $area           = 'Adultos';
-        // $tag            = 'min_pof_02';
-        // $anio           = 2020;
-        // $anio_previo    = 2019;
-        // $tipo_curso     = 'Ciclo / Curso';
-        // $anio_header    = 2025;
-        // $in_longproc    = false;
-        // $cod_last1estab = 270;
-        // $cod_area       = 'A';
-        // $rectificativa  = '';
+        // Datos reales del establecimiento (MySQL, conexión 'doctrine').
+        $estabRow = EstablecimientoPofP::find($estab);
+        if (! $estabRow) {
+            abort(404, "No existe el establecimiento {$estab}.");
+        }
 
-        // gestion privada...
-        $area           = 'Gestión Privada';
+        // Código de área (1 letra) -> nombre. El catálogo completo vendría de
+        // la tabla de Áreas (650), aún no modelada; mapa best-effort por ahora.
+        $cod_area  = (string) $estabRow->area;
+        $areaNames = ['A' => 'Adultos', 'D' => 'Gestión Privada'];
+        $area      = $areaNames[$cod_area] ?? ('Área ' . $cod_area);
+
+        $ycfg_file      = 'multig_min02';
         $tag            = 'min_pof_02';
-        $anio           = 2020;
-        $anio_previo    = 2019;
+        $anio_previo    = $anio - 1;
         $tipo_curso     = 'Curso';
-        $anio_header    = 2025;
+        $anio_header    = $anio;
         $in_longproc    = false;
-        $cod_last1estab = 1400;
-        $cod_area       = 'D';
-        
+        $cod_last1estab = $estab;
+
         $rectificativa  = '';
         $periodo        = '';
 
@@ -198,27 +202,27 @@ class ReporteController extends Controller
         //   270,
         //   );
 
-        // - en gestion privada(D)
+        // datos del establecimiento (desde el registro real en MySQL)...
         $h_estab = array(
-           'id'             => 1400,
-           'nombre'         => 'SUPERVISION GESTION PRIVADA',
-           'cue'            => '999999',
-           'escuela'        => '99',
-           'direccion'      => 'CARLOS H PERETTE 770, 4º PISO',
-           'codigo'         => 1400,
-           'cod_modalidad'  => 74,
-           'modalidad'      => 'Supervisión',
-           'cod_area'       => 'D',
-           'area'           => 'Gestión Privada',
-           'cod_tipo_curso' => 10,
-           'tipo_curso'     => 'Curso',
-           'cod_de'         => 9,
-           'de'             => 9,
+           'id'             => $estabRow->c658_id,
+           'nombre'         => $estabRow->c658_nombre,
+           'cue'            => $estabRow->c658_cue,
+           'escuela'        => $estabRow->c658_escuela,
+           'direccion'      => $estabRow->c658_direccion,
+           'codigo'         => $estabRow->c658_id,
+           'cod_modalidad'  => $estabRow->c658_664_id,
+           'modalidad'      => $estabRow->modalidad,      // código (sin tabla de nombres)
+           'cod_area'       => $cod_area,
+           'area'           => $area,
+           'cod_tipo_curso' => null,
+           'tipo_curso'     => $tipo_curso,
+           'cod_de'         => $estabRow->c658_657_id,
+           'de'             => $estabRow->c658_657_id,
            );
 
         // ...
         $h_dt1area = array(
-          1400,
+          $estab,
           );
         
         $aprobado_ant = null;
@@ -285,7 +289,7 @@ class ReporteController extends Controller
         // ... 
         return response($raw, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="rpt_min02.pdf"',
+            'Content-Disposition' => "inline; filename=\"rpt_min02_{$estab}_{$anio}.pdf\"",
         ]);
     }
 

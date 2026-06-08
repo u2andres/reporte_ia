@@ -240,6 +240,7 @@ El proyecto integra **dos** librerías de generación de PDF, cada una con su gu
 |----------|----------|----------|------|
 | **tc-lib-pdf** 8 | API moderna OO (HTML, tablas) | `/reporte/test` | 📄 [INTEGRAR-TC-LIB.md](INTEGRAR-TC-LIB.md) |
 | **TCPDF** 6 + `WrapTcpLib` | Reporteador legacy por YAML (grillas, grupos, cabecera/pie, marca de agua) | `/reporte/cursos` | 📄 [INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md) |
+| **TCPDF** 6 + `ReportMin02` | Reporte real "Planta Completa Valorizada" (datos desde MySQL, parametrizado) | `/reporte/min_02/{estab?}/{anio?}` | 📄 [INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md) |
 
 > Ambas comparten la constante global `K_PATH_FONTS` con formatos de fuente distintos; por eso **no** se define globalmente sino dentro de cada controlador. Ver detalle en las guías.
 
@@ -252,6 +253,7 @@ php artisan serve             # Levanta el servidor
 
 - **tc-lib-pdf:** http://localhost:8000/reporte/test
 - **WrapTcpLib (TCPDF):** http://localhost:8000/reporte/cursos
+- **ReportMin02 (datos reales):** http://localhost:8000/reporte/min_02/3510/2020 (o `/reporte/min_02` para el default 1400/2020)
 
 ---
 

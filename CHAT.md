@@ -247,22 +247,47 @@ Documentado en [INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md) (subsección "C)
 
 ---
 
+## 10. Reporte parametrizado (`estab` y `anio`)
+
+**Pedidos:** _"parametriza el reporte con el parametro estab para establecimiento y anio para el año"_ + _"agregar los parametros anio y estab en el endpoint reporte.rpt_min02"_.
+
+`rpt_min02` dejó de estar fijo a 1400/2020:
+
+- **Ruta** con parámetros opcionales: `/reporte/min_02/{estab?}/{anio?}` (nombre `reporte.rpt_min02`).
+- Controlador `rpt_min02(Request $request, $estab = null, $anio = null)`: resuelve por **ruta**, luego **query string**, luego defaults `1400/2020`.
+- Busca el establecimiento real con `EstablecimientoPofP::find($estab)` → 404 si no existe.
+- Arma `$h_estab` con los datos reales del registro y deriva `cod_area`, `anio_previo`, `anio_header`, `cod_last1estab`, `h_dt1area`.
+- El PDF se nombra `rpt_min02_<estab>_<anio>.pdf`.
+
+**Formas de uso:**
+- `/reporte/min_02/3510/2020` (ruta)
+- `/reporte/min_02?estab=3510&anio=2020` (query string)
+- `route('reporte.rpt_min02', ['estab' => 3510, 'anio' => 2020])`
+
+**Verificación HTTP:** default y `/1400/2020` → 200 (~49 KB); `/3510` y `/3510/2020` (156 filas, C/E/H) → 200 (~62 KB); query string equivalente → 200; `/999999999` → 404.
+
+**Limitación cosmética:** los datos numéricos son correctos para cualquier estab/año, pero **Área** (mapa best-effort), **Modalidad** (código) y **D.E.** (distrito_escolar_id) no muestran nombres completos por falta de las tablas de catálogo (650/664/657).
+
+Documentado en [INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md) (subsección "D) Reporte parametrizado").
+
+---
+
 ## Estado final del proyecto
 
 - Documentación del proyecto en español ([README.md](README.md)).
 - **tc-lib-pdf** funcionando y documentado ([INTEGRAR-TC-LIB.md](INTEGRAR-TC-LIB.md)) → `GET /reporte/test`.
 - **WrapTcpLib + TCPDF clásico** migrado, funcionando y documentado ([INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md)):
   - `GET /reporte/cursos` (reporte simple, datos de ejemplo).
-  - `GET /reporte/min_02` (reporte real "Planta Completa Valorizada", orquestador `ReportMin02`, **datos reales desde la base vía Eloquent**).
+  - `GET /reporte/min_02?estab=&anio=` (reporte real "Planta Completa Valorizada", orquestador `ReportMin02`, **datos reales desde MySQL**, parametrizado por establecimiento/año).
 - **Capa de datos Eloquent** mapeando el esquema legacy (`PofP` + `CargoPofP`/`TurnoPofP`/`EstablecimientoPofP`/`HistoriaPofP`), leyendo de la **base MySQL real** (`sdo_db`) vía la conexión dedicada `doctrine`.
 - Comando `php artisan pdf:import-font` para gestionar fuentes de tc-lib-pdf.
 
 ## Próximos pasos pendientes
 
-1. **Parametrizar** establecimiento/año en `rpt_min02()` (hoy hardcodeados en 1400/2020), p.ej. por query string `/reporte/min_02?estab=...&anio=...`.
+1. Modelar las **tablas de catálogo** (Área 650, Modalidad 664, Distrito 657) para mostrar nombres completos en el encabezado (hoy: Área best-effort, Modalidad/D.E. como código).
 2. Portar el path `callback1query` (Doctrine) de `WrapTcpLib` a Eloquent si se necesita paginación por query (hoy se usa `callback1hash`).
 3. Portar el código legacy en desuso de `ReportMin02` (`mylongprocActions`, `get_cnt1data`, `cbk_firma`) si se necesitan procesos largos o firmas.
 
 ---
 
-_Generado a partir del trabajo realizado en la sesión (2026-06-05 → 2026-06-07)._
+_Generado a partir del trabajo realizado en la sesión (2026-06-05 → 2026-06-08)._
