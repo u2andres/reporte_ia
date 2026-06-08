@@ -183,19 +183,51 @@ Se verificó que **funciona sin cambios** sobre la infraestructura ya migrada: P
 
 ---
 
+## 8. Capa de datos Eloquent: de mocks a base real (A + B)
+
+**Pedidos:** _"se agrego el modelo Pofp"_ → opción **A** → opción **B** → rename de modelos → comentar `$json_mock`.
+
+Se mapeó el esquema legacy (Doctrine 1.2) a Eloquent y se conectó `rpt_min02` a la base.
+
+### A) Modelos + migraciones + seeder
+
+- Modelo central [PofP](app/Models/PofP.php) (tabla `680_POF_P`) + relacionados [CargoPofP](app/Models/CargoPofP.php) (`652_*`), [TurnoPofP](app/Models/TurnoPofP.php) (`686_*`), [EstablecimientoPofP](app/Models/EstablecimientoPofP.php) (`658_*`), [HistoriaPofP](app/Models/HistoriaPofP.php) (`661_*`). Esquemas tomados de los YAML Doctrine que pasó el usuario (nombres físicos `cNNN_*`, PK, tipos, alias).
+- Relaciones `belongsTo` habilitadas en `PofP`. Tipo de cargo C/E/H = `c652_685_id`.
+- Migraciones para las 4 tablas + [PofReportSeeder](database/seeders/PofReportSeeder.php) con datos que reproducen los mocks (Conducción estab. 1400, año 2020, **suma 90**).
+
+### B) Consultas portadas (en `PofP`) + integración
+
+- `get_sumt1cargo`, `get_hmix1cargo`, `get_h1cargo1area` (reemplazan a `PofPTable` de Doctrine), usando relaciones/`whereHas`.
+- Los `cbk_*` de [ReportMin02](app/Libraries/Reports/ReportMin02.php) ahora invocan esos métodos en lugar de `json_decode`. Los `$json_mock` quedaron **comentados** como referencia.
+
+### Ajustes adicionales
+
+- **Rename de modelos** (a pedido del usuario) a los nombres Doctrine `*PofP`; se corrigieron referencias rotas (`HistoriaPofP`/`EstablecimientoPofP` entre sí y en el seeder).
+- **Case de archivos** corregido: `CargoPofP.php` / `EstablecimientoPofP.php` (antes `...Pofp.php`) para PSR-4 portable a Linux.
+
+### Verificación
+
+- `get_sumt1cargo(1400,2020,'C')` = **90**; `get_hmix1cargo` = 10 cargos = 90.
+- `GET /reporte/min_02` con datos desde la base: **49.189 bytes**, idéntico a la versión con mocks (mismos datos → mismo PDF).
+
+Documentado en [INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md) (sección "Capa de datos: modelos Eloquent").
+
+---
+
 ## Estado final del proyecto
 
 - Documentación del proyecto en español ([README.md](README.md)).
 - **tc-lib-pdf** funcionando y documentado ([INTEGRAR-TC-LIB.md](INTEGRAR-TC-LIB.md)) → `GET /reporte/test`.
 - **WrapTcpLib + TCPDF clásico** migrado, funcionando y documentado ([INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md)):
   - `GET /reporte/cursos` (reporte simple, datos de ejemplo).
-  - `GET /reporte/min_02` (reporte real "Planta Completa Valorizada", orquestador `ReportMin02`, datos mockeados).
+  - `GET /reporte/min_02` (reporte real "Planta Completa Valorizada", orquestador `ReportMin02`, **datos reales desde la base vía Eloquent**).
+- **Capa de datos Eloquent** mapeando el esquema legacy (`PofP` + `CargoPofP`/`TurnoPofP`/`EstablecimientoPofP`/`HistoriaPofP`) + seeder.
 - Comando `php artisan pdf:import-font` para gestionar fuentes de tc-lib-pdf.
 
 ## Próximos pasos pendientes
 
-1. Conectar la generación de PDF a **datos reales de la base** (modelos del dominio: `Curso`, `Alumno`, `Inscripcion`, etc.).
-2. Portar el path de datos de WrapTcpLib por `callback1query` (Doctrine) a **Eloquent**, y reemplazar los mocks `json_decode` de `ReportMin02` por consultas reales.
+1. Sembrar datos de **Ejecución (E)** y **Horas Cátedra (H)** y `puntaje` en cargos para enriquecer el reporte (hoy solo Conducción, valorización 0).
+2. Portar el path `callback1query` (Doctrine) de `WrapTcpLib` a Eloquent si se necesita paginación por query (hoy se usa `callback1hash`).
 3. Portar el código legacy en desuso de `ReportMin02` (`mylongprocActions`, `get_cnt1data`, `cbk_firma`) si se necesitan procesos largos o firmas.
 
 ---

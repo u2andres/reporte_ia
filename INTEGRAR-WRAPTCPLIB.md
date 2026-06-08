@@ -24,6 +24,7 @@ Guía de la migración de la clase legacy **`WrapTcpLib`** para que funcione en 
 - [Cómo probar](#cómo-probar)
 - [Verificación realizada](#verificación-realizada)
 - [Segundo reporte: rpt_min02 (orquestador)](#segundo-reporte-rpt_min02-orquestador)
+- [Capa de datos: modelos Eloquent (A + B)](#capa-de-datos-modelos-eloquent-a--b)
 - [Pendientes y advertencias](#pendientes-y-advertencias)
 
 ---
@@ -270,9 +271,9 @@ return $pdf->Output($output_file . '.pdf', 'S');
 
 Los **callbacks** del YAML (`mk_header`, `mk_footer`, `cbk_conduccion`, `cbk_total`, etc.) son métodos estáticos de `ReportMin02`, referenciados como `[ 'App\Libraries\Reports\ReportMin02', 'metodo' ]`. Acceden a la configuración con `$pdf->gst_huser(null, 'clave')`.
 
-### Datos mockeados
+### Datos: de mocks a Eloquent
 
-Las consultas originales a `PofPTable` (Doctrine) están **comentadas** y reemplazadas por datos fijos vía `json_decode()` dentro de cada `cbk_*`. Esto permite probar el layout sin base de datos. Para datos reales habría que reemplazar esos mocks por consultas Eloquent.
+Originalmente los `cbk_*` devolvían datos fijos vía `json_decode()` (mocks de las consultas Doctrine `PofPTable`). **Ahora consultan la base de datos** mediante métodos Eloquent en el modelo `PofP` — ver [Capa de datos](#capa-de-datos-modelos-eloquent-a--b). Los `$json_mock` quedaron **comentados** como referencia del formato esperado.
 
 ### Logo y K_PATH_IMAGES
 
@@ -293,14 +294,60 @@ if (! defined('K_PATH_IMAGES')) {
 
 ---
 
+## Capa de datos: modelos Eloquent (A + B)
+
+Para que `rpt_min02` deje de usar mocks y consulte datos reales, se mapearon las tablas legacy (Doctrine 1.2) a modelos Eloquent y se portaron las consultas.
+
+### A) Modelos, migraciones y seeder
+
+Mapeo fiel del esquema Doctrine (nombres físicos `cNNN_*`, PK, tipos, alias):
+
+| Modelo | Tabla | PK | Doctrine origen |
+|--------|-------|----|-----------------|
+| [PofP](app/Models/PofP.php) | `680_POF_P` | `c680_id` | PofP |
+| [CargoPofP](app/Models/CargoPofP.php) | `652_CARGO_POF_P` | `c652_id` | CargoPofP |
+| [TurnoPofP](app/Models/TurnoPofP.php) | `686_TURNO_POF_P` | `c686_id` (char, no-auto) | TurnoPofP |
+| [EstablecimientoPofP](app/Models/EstablecimientoPofP.php) | `658_ESTABLECIMIENTO_POF_P` | `c658_id` | EstablecimientoPofP |
+| [HistoriaPofP](app/Models/HistoriaPofP.php) | `661_HISTORIA_POF_P` | `c661_id` | HistoriaPofP |
+
+- `PofP` define los `belongsTo` (`establecimiento`, `turno`, `cargo`, `historia`). El **tipo de cargo** (C/E/H) es `c652_685_id` en `CargoPofP`.
+- Las relaciones a modelos aún no creados (Area, TipoCargo, Modalidad, etc.) quedan comentadas.
+- El seeder [PofReportSeeder](database/seeders/PofReportSeeder.php) reproduce los mocks: 4 turnos, 10 cargos de Conducción (tipo `C`), establecimiento 1400 e historia 2020, y 10 filas en `680_POF_P` cuyas cantidades **suman 90** (el mismo total que mockeaba el reporte).
+
+```bash
+php artisan migrate
+php artisan db:seed --class=PofReportSeeder
+```
+
+> **Nota de nombres:** los modelos usan el sufijo `PofP` (igual que las clases Doctrine). El archivo debe respetar ese case exacto (`CargoPofP.php`, no `CargoPofp.php`) para que PSR-4 funcione en Linux.
+
+### B) Consultas portadas (en el modelo `PofP`)
+
+Reemplazan a los métodos de `PofPTable` (Doctrine). Los `cbk_*` de `ReportMin02` ahora las invocan en lugar de los `json_decode`:
+
+| Método | Reemplaza | Devuelve |
+|--------|-----------|----------|
+| `PofP::get_sumt1cargo($cod, $anio, $tipo=null)` | `get_sumt1cargo` | suma de `cantidad` (tipo null = todos) |
+| `PofP::get_hmix1cargo($cod, $anio, $tipo, &$subtotal)` | `get_hmix1cargo` | hash de cargos (cnt actual/previo, diff, valoriz) |
+| `PofP::get_h1cargo1area($anio, $area, &$totales)` | `get_h1cargo1area` | cargos por área + totales PI mensual/anual |
+
+Usan las relaciones (`with(['cargo','turno'])`, `whereHas('cargo', ...)`) para filtrar por tipo de cargo y traer `cargo1d`/`turno1d`.
+
+### Verificación (datos reales)
+
+- `get_sumt1cargo(1400, 2020, 'C')` = **90**; año previo (2019) = 0.
+- `get_hmix1cargo(...)` = 10 cargos, `cnt_actual` suma **90**; `cargo1d` = "75 - SUPERVISOR …", `turno1d` = "Completo".
+- Reporte `GET /reporte/min_02` con datos desde la base: **49.189 bytes** — idéntico byte a byte a la versión con mocks (mismos datos → mismo PDF).
+
+---
+
 ## Pendientes y advertencias
 
-- **Path de datos por Doctrine NO portado.** La fuente de datos vía `callback1query` (paginación con `Doctrine_Core::HYDRATE_ARRAY`, en `sc_callback1row()` y `sc_grp1query()`) sigue sin migrar. El camino funcional es **`callback1hash`** (devuelve un array de filas). Para datos reales, reemplazar ese branch por Eloquent, por ejemplo:
+- **Path `callback1query` de WrapTcpLib (Doctrine) sin portar.** El reporteador `WrapTcpLib` aún tiene un camino de datos por `callback1query` (con `Doctrine_Core::HYDRATE_ARRAY`, en `sc_callback1row()` / `sc_grp1query()`) que no se migró. No se usa: tanto `cursos` como `rpt_min02` van por **`callback1hash`** (array de filas). Si en el futuro se necesita paginación por query, portar ese branch a Eloquent.
 
-  ```php
-  // dentro del callback1hash
-  return \App\Models\Curso::query()->orderBy('nombre')->get()->toArray();
-  ```
+- **Cargos con `puntaje = null`** en el seeder → la columna **Valorización** sale 0. Para ver valorizaciones, cargar `c652_puntaje` en los cargos.
+
+- **Ejecución / Horas Cátedra vacías:** el seeder solo carga Conducción (tipo `C`). Agregar filas tipo `E`/`H` para poblar esas secciones.
 
 - **`ins_line2report()`** contiene una llamada a `writeHTMLCell()` con argumentos en posiciones de una API de TCPDF aún más vieja (pasa `$data` en la posición de `$x`). No está en el camino del reporte de cursos, pero si se usa ese método habrá que corregir el orden de parámetros.
 
@@ -308,9 +355,7 @@ if (! defined('K_PATH_IMAGES')) {
 
 - **Marca de agua / preliminar:** `ColoredTable($yaml, $l_prelim = true)` activa la marca de agua "NO VALIDO". No se probó en este harness.
 
-- **Refs legacy en código muerto de `ReportMin02`:** `myllongprocActions::gst_hget1tag()` (solo en el branch `in_longproc = true`, que está en `false`) y los métodos `get_cnt1data()` / `cbk_firma()` (no referenciados desde el YAML). No afectan la ejecución actual, pero romperían si se activan. Habría que portarlos antes de usar "procesos largos" (multi-establecimiento) o las firmas.
-
-- **Datos mockeados en `ReportMin02`:** los `cbk_*` devuelven JSON fijo en lugar de consultar la base. Reemplazar por Eloquent para datos reales.
+- **Refs legacy en código muerto de `ReportMin02`:** `mylongprocActions::gst_hget1tag()` (solo en el branch `in_longproc = true`, que está en `false`) y los métodos `get_cnt1data()` / `cbk_firma()` (no referenciados desde el YAML). No afectan la ejecución actual, pero romperían si se activan. Habría que portarlos antes de usar "procesos largos" (multi-establecimiento) o las firmas.
 
 ---
 

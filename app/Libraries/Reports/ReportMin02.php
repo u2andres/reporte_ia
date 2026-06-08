@@ -2,6 +2,7 @@
 namespace App\Libraries\Reports;
 
 use App\Libraries\WrapTcpLib;
+use App\Models\PofP;
 
 // para los listados...
 // 300 seconds = 5 minutes para el script...
@@ -501,8 +502,8 @@ EOD;
     // - trae la suma...
     // $sum_data1prev = PofPTable::getInstance()->get_sumt1cargo($codigo, $anio - 1, $tipo_cargo); // , $rectificativa);
 
-    $sum_data      = 90;
-    $sum_data1prev = 0 ;
+    $sum_data      = PofP::get_sumt1cargo($codigo, $anio, $tipo_cargo);
+    $sum_data1prev = PofP::get_sumt1cargo($codigo, $anio - 1, $tipo_cargo);
     
     // ...
     $h_merge = array();
@@ -565,8 +566,9 @@ EOD;
     //  - - - -
     
     $subtotal  = 0;
-    $json_mock = '{"0000_75_C":{"cargo_id":"75","cargo1d":"75 - SUPERVISOR D.G.E.G.P EDUCACION INCLUSIVA","puntaje":null,"turno_id":"C","turno1d":"Completo","cnt_previa":0,"cnt_actual":"1","diff":1,"valoriz":0},"0000_607_C":{"cargo_id":"607","cargo1d":"607 - SUPERVISOR  D.G.E.G.P PRIMARIO","puntaje":null,"turno_id":"C","turno1d":"Completo","cnt_previa":0,"cnt_actual":"23","diff":23,"valoriz":0},"0000_606_C":{"cargo_id":"606","cargo1d":"606 - SUPERVISOR  D.G.E.G.P. TERCIARIA","puntaje":null,"turno_id":"C","turno1d":"Completo","cnt_previa":0,"cnt_actual":"10","diff":10,"valoriz":0},"0000_605_C":{"cargo_id":"605","cargo1d":"605 - SUPERVISOR  D.G.E.G.P. MEDIA","puntaje":null,"turno_id":"C","turno1d":"Completo","cnt_previa":0,"cnt_actual":"18","diff":18,"valoriz":0},"0000_53_C":{"cargo_id":"53","cargo1d":"53 - SUPERVISOR D.G.E.G.P REGISTRO INSTITUCIONES EDUCATIVAS ASISTENCIALES","puntaje":null,"turno_id":"C","turno1d":"Completo","cnt_previa":0,"cnt_actual":"5","diff":5,"valoriz":0},"0000_3743_C":{"cargo_id":"3743","cargo1d":"3743 - SUPERVISOR D.G.E.G.P. DE EDUCACI\u00d3N SUPERIOR SALUD","puntaje":null,"turno_id":"C","turno1d":"Completo","cnt_previa":0,"cnt_actual":"1","diff":1,"valoriz":0},"0000_2988_C":{"cargo_id":"2988","cargo1d":"2988 - SUPERVISOR D.G.E.G.P. DE ORGANIZACI\u00d3N ESCOLAR","puntaje":null,"turno_id":"C","turno1d":"Completo","cnt_previa":0,"cnt_actual":"11","diff":11,"valoriz":0},"0000_2987_C":{"cargo_id":"2987","cargo1d":"2987 - SUPERVISOR D.G.E.G.P. T\u00c9CNICO PEDAG\u00d3GICA","puntaje":null,"turno_id":"C","turno1d":"Completo","cnt_previa":0,"cnt_actual":"6","diff":6,"valoriz":0},"0000_2857_C":{"cargo_id":"2857","cargo1d":"2857 - SUPERVISOR D.G.E.G.P. DE LA EDUCACI\u00d3N ESPECIAL","puntaje":null,"turno_id":"C","turno1d":"Completo","cnt_previa":0,"cnt_actual":"4","diff":4,"valoriz":0},"0000_2856_C":{"cargo_id":"2856","cargo1d":"2856 - SUPERVISOR D.G.E.G.P. EDUCACI\u00d3N INICIAL","puntaje":null,"turno_id":"C","turno1d":"Completo","cnt_previa":0,"cnt_actual":"11","diff":11,"valoriz":0}}';
-    $h_merge   = json_decode($json_mock, true);  
+    // mock previo (datos ahora desde la base): $json_mock = '{"0000_75_C":{"cargo_id":"75","cargo1d":"75 - SUPERVISOR D.G.E.G.P EDUCACION INCLUSIVA","puntaje":null,"turno_id":"C","turno1d":"Completo","cnt_previa":0,"cnt_actual":"1","diff":1,"valoriz":0},"0000_607_C":{"cargo_id":"607","cargo1d":"607 - SUPERVISOR  D.G.E.G.P PRIMARIO","puntaje":null,"turno_id":"C","turno1d":"Completo","cnt_previa":0,"cnt_actual":"23","diff":23,"valoriz":0},"0000_606_C":{"cargo_id":"606","cargo1d":"606 - SUPERVISOR  D.G.E.G.P. TERCIARIA","puntaje":null,"turno_id":"C","turno1d":"Completo","cnt_previa":0,"cnt_actual":"10","diff":10,"valoriz":0},"0000_605_C":{"cargo_id":"605","cargo1d":"605 - SUPERVISOR  D.G.E.G.P. MEDIA","puntaje":null,"turno_id":"C","turno1d":"Completo","cnt_previa":0,"cnt_actual":"18","diff":18,"valoriz":0},"0000_53_C":{"cargo_id":"53","cargo1d":"53 - SUPERVISOR D.G.E.G.P REGISTRO INSTITUCIONES EDUCATIVAS ASISTENCIALES","puntaje":null,"turno_id":"C","turno1d":"Completo","cnt_previa":0,"cnt_actual":"5","diff":5,"valoriz":0},"0000_3743_C":{"cargo_id":"3743","cargo1d":"3743 - SUPERVISOR D.G.E.G.P. DE EDUCACI\u00d3N SUPERIOR SALUD","puntaje":null,"turno_id":"C","turno1d":"Completo","cnt_previa":0,"cnt_actual":"1","diff":1,"valoriz":0},"0000_2988_C":{"cargo_id":"2988","cargo1d":"2988 - SUPERVISOR D.G.E.G.P. DE ORGANIZACI\u00d3N ESCOLAR","puntaje":null,"turno_id":"C","turno1d":"Completo","cnt_previa":0,"cnt_actual":"11","diff":11,"valoriz":0},"0000_2987_C":{"cargo_id":"2987","cargo1d":"2987 - SUPERVISOR D.G.E.G.P. T\u00c9CNICO PEDAG\u00d3GICA","puntaje":null,"turno_id":"C","turno1d":"Completo","cnt_previa":0,"cnt_actual":"6","diff":6,"valoriz":0},"0000_2857_C":{"cargo_id":"2857","cargo1d":"2857 - SUPERVISOR D.G.E.G.P. DE LA EDUCACI\u00d3N ESPECIAL","puntaje":null,"turno_id":"C","turno1d":"Completo","cnt_previa":0,"cnt_actual":"4","diff":4,"valoriz":0},"0000_2856_C":{"cargo_id":"2856","cargo1d":"2856 - SUPERVISOR D.G.E.G.P. EDUCACI\u00d3N INICIAL","puntaje":null,"turno_id":"C","turno1d":"Completo","cnt_previa":0,"cnt_actual":"11","diff":11,"valoriz":0}}';
+    // datos reales desde la base (reemplaza el mock json):
+    $h_merge   = PofP::get_hmix1cargo($codigo, $anio, $tipo_cargo, $subtotal);
     if(count($h_merge) > 0)
     { // agrego el subtotal...
       $pdf->gst_huser( null, 'subtotal_' . $tipo_cargo, $subtotal);
@@ -602,8 +604,8 @@ EOD;
     // - trae la suma...
     // $sum_data1prev = PofPTable::getInstance()->get_sumt1cargo($codigo, $anio - 1, $tipo_cargo); // , $rectificativa);
 
-    $sum_data      = 90;
-    $sum_data1prev = 0 ;
+    $sum_data      = PofP::get_sumt1cargo($codigo, $anio, $tipo_cargo);
+    $sum_data1prev = PofP::get_sumt1cargo($codigo, $anio - 1, $tipo_cargo);
     
     // ...
     $h_merge = array();    
@@ -661,8 +663,8 @@ EOD;
     // - trae la suma...
     // $sum_data1prev = PofPTable::getInstance()->get_sumt1cargo($codigo, $anio - 1, $tipo_cargo); // , $rectificativa);
 
-    $sum_data      = 0;
-    $sum_data1prev = 0;
+    $sum_data      = PofP::get_sumt1cargo($codigo, $anio, $tipo_cargo);
+    $sum_data1prev = PofP::get_sumt1cargo($codigo, $anio - 1, $tipo_cargo);
 
     // ...
     $h_merge = array();
@@ -708,7 +710,9 @@ EOD;
     $l_diff  = false;
     // $h_merge = PofPTable::getInstance()->get_hmix1cargo($codigo, $anio, true, $tipo_cargo, $subtotal, 
     //   $l_diff, null, true); // , $rectificativa);
-    $h_merge = array();  
+    // datos reales desde la base (reemplaza el mock vacío):
+    $subtotal = 0;
+    $h_merge  = PofP::get_hmix1cargo($codigo, $anio, $tipo_cargo, $subtotal);  
     if(count($h_merge) > 0)
     { // agrego el subtotal...
       $pdf->gst_huser( null, 'subtotal_' . $tipo_cargo, $subtotal);
@@ -743,8 +747,8 @@ EOD;
     // - trae la suma...
     // $sum_data1prev = PofPTable::getInstance()->get_sumt1cargo($codigo, $anio - 1, $tipo_cargo); // , $rectificativa);
 
-    $sum_data      = 0;
-    $sum_data1prev = 0;
+    $sum_data      = PofP::get_sumt1cargo($codigo, $anio, $tipo_cargo);
+    $sum_data1prev = PofP::get_sumt1cargo($codigo, $anio - 1, $tipo_cargo);
     
     // ...
     $h_merge = array();    
@@ -802,8 +806,8 @@ EOD;
     // - trae la suma...
     // $sum_data1prev = PofPTable::getInstance()->get_sumt1cargo($codigo, $anio - 1, $tipo_cargo); // , $rectificativa);
 
-    $sum_data      = 0;
-    $sum_data1prev = 0;
+    $sum_data      = PofP::get_sumt1cargo($codigo, $anio, $tipo_cargo);
+    $sum_data1prev = PofP::get_sumt1cargo($codigo, $anio - 1, $tipo_cargo);
     
     // ...
     $h_merge = array();
@@ -849,7 +853,9 @@ EOD;
     $l_diff  = false;
     // $h_merge = PofPTable::getInstance()->get_hmix1cargo($codigo, $anio, true, $tipo_cargo, $subtotal,
     //   $l_diff, null, true); // , $rectificativa);
-    $h_merge = array();  
+    // datos reales desde la base (reemplaza el mock vacío):
+    $subtotal = 0;
+    $h_merge  = PofP::get_hmix1cargo($codigo, $anio, $tipo_cargo, $subtotal);  
     if(count($h_merge) > 0)
     { // agrego el subtotal...
       $pdf->gst_huser( null, 'subtotal_' . $tipo_cargo, $subtotal);
@@ -884,8 +890,8 @@ EOD;
     // - trae la suma...
     // $sum_data1prev = PofPTable::getInstance()->get_sumt1cargo($codigo, $anio - 1, $tipo_cargo); // , $rectificativa);
 
-    $sum_data      = 0;
-    $sum_data1prev = 0;
+    $sum_data      = PofP::get_sumt1cargo($codigo, $anio, $tipo_cargo);
+    $sum_data1prev = PofP::get_sumt1cargo($codigo, $anio - 1, $tipo_cargo);
     
     // ...
     $h_merge = array();    
@@ -937,8 +943,8 @@ EOD;
     // $sum_data1prev = PofPTable::getInstance()->get_sumt1cargo($codigo, $anio - 1, null); // , $rectificativa);
     
     // ...
-    $sum_data      = 90;
-    $sum_data1prev = null;
+    $sum_data      = PofP::get_sumt1cargo($codigo, $anio, null);
+    $sum_data1prev = PofP::get_sumt1cargo($codigo, $anio - 1, null);
     
     // ...
     $h_merge = array();    
@@ -1022,12 +1028,13 @@ EOD;
         //  - - - -
 
         // ...
-        $json_mock = '{"2311_3299":{"de_9":"0","cargo_id":"3299","cargo1d":"SUPERVISOR","cod_de":"9","puntaje":"2311.00","total":"0","pj_mes":"0.00","pj_anio":"0.00","pj_pesos":"0.00"},"0000_53":{"de_9":"5","cargo_id":"53","cargo1d":"SUPERVISOR D.G.E.G.P REGISTRO INSTITUCIONES EDUCATIVAS ASISTENCIALES","cod_de":"9","puntaje":"0.00","total":"5","pj_mes":"0.00","pj_anio":"0.00","pj_pesos":"0.00"},"0000_75":{"de_9":"1","cargo_id":"75","cargo1d":"SUPERVISOR D.G.E.G.P EDUCACION INCLUSIVA","cod_de":"9","puntaje":"0.00","total":"1","pj_mes":"0.00","pj_anio":"0.00","pj_pesos":"0.00"},"0000_605":{"de_9":"18","cargo_id":"605","cargo1d":"SUPERVISOR  D.G.E.G.P. MEDIA","cod_de":"9","puntaje":"0.00","total":"18","pj_mes":"0.00","pj_anio":"0.00","pj_pesos":"0.00"},"0000_606":{"de_9":"10","cargo_id":"606","cargo1d":"SUPERVISOR  D.G.E.G.P. TERCIARIA","cod_de":"9","puntaje":"0.00","total":"10","pj_mes":"0.00","pj_anio":"0.00","pj_pesos":"0.00"},"0000_607":{"de_9":"23","cargo_id":"607","cargo1d":"SUPERVISOR  D.G.E.G.P PRIMARIO","cod_de":"9","puntaje":"0.00","total":"23","pj_mes":"0.00","pj_anio":"0.00","pj_pesos":"0.00"},"0000_2856":{"de_9":"11","cargo_id":"2856","cargo1d":"SUPERVISOR D.G.E.G.P. EDUCACI\u00d3N INICIAL","cod_de":"9","puntaje":"0.00","total":"11","pj_mes":"0.00","pj_anio":"0.00","pj_pesos":"0.00"},"0000_2857":{"de_9":"4","cargo_id":"2857","cargo1d":"SUPERVISOR D.G.E.G.P. DE LA EDUCACI\u00d3N ESPECIAL","cod_de":"9","puntaje":"0.00","total":"4","pj_mes":"0.00","pj_anio":"0.00","pj_pesos":"0.00"},"0000_2987":{"de_9":"6","cargo_id":"2987","cargo1d":"SUPERVISOR D.G.E.G.P. T\u00c9CNICO PEDAG\u00d3GICA","cod_de":"9","puntaje":"0.00","total":"6","pj_mes":"0.00","pj_anio":"0.00","pj_pesos":"0.00"},"0000_2988":{"de_9":"11","cargo_id":"2988","cargo1d":"SUPERVISOR D.G.E.G.P. DE ORGANIZACI\u00d3N ESCOLAR","cod_de":"9","puntaje":"0.00","total":"11","pj_mes":"0.00","pj_anio":"0.00","pj_pesos":"0.00"},"0000_3743":{"de_9":"1","cargo_id":"3743","cargo1d":"SUPERVISOR D.G.E.G.P. DE EDUCACI\u00d3N SUPERIOR SALUD","cod_de":"9","puntaje":"0.00","total":"1","pj_mes":"0.00","pj_anio":"0.00","pj_pesos":"0.00"}}';
-        $h_data    = json_decode($json_mock, true);
+        // mock previo (datos ahora desde la base): $json_mock = '{"2311_3299":{"de_9":"0","cargo_id":"3299","cargo1d":"SUPERVISOR","cod_de":"9","puntaje":"2311.00","total":"0","pj_mes":"0.00","pj_anio":"0.00","pj_pesos":"0.00"},"0000_53":{"de_9":"5","cargo_id":"53","cargo1d":"SUPERVISOR D.G.E.G.P REGISTRO INSTITUCIONES EDUCATIVAS ASISTENCIALES","cod_de":"9","puntaje":"0.00","total":"5","pj_mes":"0.00","pj_anio":"0.00","pj_pesos":"0.00"},"0000_75":{"de_9":"1","cargo_id":"75","cargo1d":"SUPERVISOR D.G.E.G.P EDUCACION INCLUSIVA","cod_de":"9","puntaje":"0.00","total":"1","pj_mes":"0.00","pj_anio":"0.00","pj_pesos":"0.00"},"0000_605":{"de_9":"18","cargo_id":"605","cargo1d":"SUPERVISOR  D.G.E.G.P. MEDIA","cod_de":"9","puntaje":"0.00","total":"18","pj_mes":"0.00","pj_anio":"0.00","pj_pesos":"0.00"},"0000_606":{"de_9":"10","cargo_id":"606","cargo1d":"SUPERVISOR  D.G.E.G.P. TERCIARIA","cod_de":"9","puntaje":"0.00","total":"10","pj_mes":"0.00","pj_anio":"0.00","pj_pesos":"0.00"},"0000_607":{"de_9":"23","cargo_id":"607","cargo1d":"SUPERVISOR  D.G.E.G.P PRIMARIO","cod_de":"9","puntaje":"0.00","total":"23","pj_mes":"0.00","pj_anio":"0.00","pj_pesos":"0.00"},"0000_2856":{"de_9":"11","cargo_id":"2856","cargo1d":"SUPERVISOR D.G.E.G.P. EDUCACI\u00d3N INICIAL","cod_de":"9","puntaje":"0.00","total":"11","pj_mes":"0.00","pj_anio":"0.00","pj_pesos":"0.00"},"0000_2857":{"de_9":"4","cargo_id":"2857","cargo1d":"SUPERVISOR D.G.E.G.P. DE LA EDUCACI\u00d3N ESPECIAL","cod_de":"9","puntaje":"0.00","total":"4","pj_mes":"0.00","pj_anio":"0.00","pj_pesos":"0.00"},"0000_2987":{"de_9":"6","cargo_id":"2987","cargo1d":"SUPERVISOR D.G.E.G.P. T\u00c9CNICO PEDAG\u00d3GICA","cod_de":"9","puntaje":"0.00","total":"6","pj_mes":"0.00","pj_anio":"0.00","pj_pesos":"0.00"},"0000_2988":{"de_9":"11","cargo_id":"2988","cargo1d":"SUPERVISOR D.G.E.G.P. DE ORGANIZACI\u00d3N ESCOLAR","cod_de":"9","puntaje":"0.00","total":"11","pj_mes":"0.00","pj_anio":"0.00","pj_pesos":"0.00"},"0000_3743":{"de_9":"1","cargo_id":"3743","cargo1d":"SUPERVISOR D.G.E.G.P. DE EDUCACI\u00d3N SUPERIOR SALUD","cod_de":"9","puntaje":"0.00","total":"1","pj_mes":"0.00","pj_anio":"0.00","pj_pesos":"0.00"}}';
+        // datos reales por área desde la base (reemplaza el mock json):
+        $h_data    = PofP::get_h1cargo1area($anio, $cod_area, $h_totales);
         
         // ...
-        $json_mock = '{"mensual_pj":0,"anual_pj":0,"anual_pesos":0}';
-        $h_totales = json_decode($json_mock, true);
+        // mock previo (datos ahora desde la base): $json_mock = '{"mensual_pj":0,"anual_pj":0,"anual_pesos":0}';
+        // $h_totales ya fue completado por get_h1cargo1area() (arriba)
       } else
       { // rectificativa...
         // - se trae los datos...

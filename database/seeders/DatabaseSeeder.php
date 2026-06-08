@@ -21,5 +21,8 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        // Datos de prueba para el reporte rpt_min02
+        $this->call(PofReportSeeder::class);
     }
 }
