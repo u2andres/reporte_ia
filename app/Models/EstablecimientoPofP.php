@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class EstablecimientoPofP extends Model
 {
+    protected $connection = 'doctrine';
     protected $table = '658_ESTABLECIMIENTO_POF_P';
     protected $primaryKey = 'c658_id';
     public $timestamps = false;

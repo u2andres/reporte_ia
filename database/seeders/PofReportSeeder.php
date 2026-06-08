@@ -23,6 +23,13 @@ class PofReportSeeder extends Seeder
 {
     public function run(): void
     {
+        // SEGURIDAD: si los modelos apuntan a la conexión 'doctrine' (MySQL con
+        // datos reales), NO sembrar (haría truncate/insert sobre datos reales).
+        if ((new CargoPofP())->getConnectionName() === 'doctrine') {
+            $this->command?->warn('PofReportSeeder omitido: modelos en conexión "doctrine" (MySQL real). No se toca esa base.');
+            return;
+        }
+
         // Limpieza para que el seeder sea repetible
         PofP::truncate();
         CargoPofP::truncate();

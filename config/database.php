@@ -84,6 +84,29 @@ return [
             ]) : [],
         ],
 
+        // Conexión a la base MySQL legacy (datos reales de POF: 680_POF_P, 652_CARGO_POF_P, etc.)
+        // Equivale a la antigua connection 'doctrine'. Usada por los modelos App\Models\*PofP.
+        // Solo lectura: las tablas ya existen con datos, no se migra ni seedea aquí.
+        'doctrine' => [
+            'driver' => 'mysql',
+            'url' => env('DB_DOCTRINE_URL'),
+            'host' => env('DB_DOCTRINE_HOST', '127.0.0.1'),
+            'port' => env('DB_DOCTRINE_PORT', '3306'),
+            'database' => env('DB_DOCTRINE_DATABASE', 'forge'),
+            'username' => env('DB_DOCTRINE_USERNAME', 'root'),
+            'password' => env('DB_DOCTRINE_PASSWORD', ''),
+            'unix_socket' => env('DB_DOCTRINE_SOCKET', ''),
+            'charset' => env('DB_DOCTRINE_CHARSET', 'utf8mb4'),
+            'collation' => env('DB_DOCTRINE_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                (PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DB_URL'),

@@ -214,6 +214,39 @@ Documentado en [INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md) (sección "Capa 
 
 ---
 
+## 9. Conexión a MySQL real (conexión dedicada `doctrine`)
+
+**Pedido:** _"tengo una conexion a mysql con datos reales"_.
+
+Se conectaron los modelos legacy a la base MySQL real (`sdo_db`, MariaDB 10.1), replicando la idea del `connection: doctrine` original.
+
+### Decisiones (consultadas con el usuario)
+
+- **Conexión dedicada** para las tablas legacy; las tablas propias de Laravel siguen en SQLite (no se toca la base real).
+- Las tablas **ya existen con datos** → solo lectura, sin migraciones ni seeder contra MySQL.
+
+### Cambios
+
+- [config/database.php](config/database.php): nueva conexión `doctrine` (driver `mysql`) vía `DB_DOCTRINE_*`.
+- `.env` / `.env.example`: bloque `DB_DOCTRINE_*`.
+- Los 5 modelos `*PofP` con `protected $connection = 'doctrine'`.
+- **Seguridad:** `PofReportSeeder` desregistrado de `DatabaseSeeder` + guard que aborta si la conexión es `doctrine` (no escribir sobre datos reales).
+
+### Verificación
+
+- Conexión OK → `sdo_db`. Las 5 tablas existen (`680_POF_P` ~33.7k filas) y las columnas coinciden con el mapeo.
+- Tipos de cargo reales: C=217, E=817, H=96.
+- `GET /reporte/min_02` (estab 1400 / año 2020): **11 cargos de Conducción reales**, suma 90 → PDF `200 OK`, ~49 KB.
+
+### Notas
+
+- **MariaDB 10.1** es vieja: la introspección de esquema de Laravel (`getColumnListing`, `migrate`, `db:show`) falla por `generation_expression` (solo MySQL 5.7+). No afecta las consultas de datos del reporte.
+- Establecimiento/año siguen hardcodeados en `rpt_min02()`.
+
+Documentado en [INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md) (subsección "C) Conexión a la base MySQL real").
+
+---
+
 ## Estado final del proyecto
 
 - Documentación del proyecto en español ([README.md](README.md)).
@@ -221,12 +254,12 @@ Documentado en [INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md) (sección "Capa 
 - **WrapTcpLib + TCPDF clásico** migrado, funcionando y documentado ([INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md)):
   - `GET /reporte/cursos` (reporte simple, datos de ejemplo).
   - `GET /reporte/min_02` (reporte real "Planta Completa Valorizada", orquestador `ReportMin02`, **datos reales desde la base vía Eloquent**).
-- **Capa de datos Eloquent** mapeando el esquema legacy (`PofP` + `CargoPofP`/`TurnoPofP`/`EstablecimientoPofP`/`HistoriaPofP`) + seeder.
+- **Capa de datos Eloquent** mapeando el esquema legacy (`PofP` + `CargoPofP`/`TurnoPofP`/`EstablecimientoPofP`/`HistoriaPofP`), leyendo de la **base MySQL real** (`sdo_db`) vía la conexión dedicada `doctrine`.
 - Comando `php artisan pdf:import-font` para gestionar fuentes de tc-lib-pdf.
 
 ## Próximos pasos pendientes
 
-1. Sembrar datos de **Ejecución (E)** y **Horas Cátedra (H)** y `puntaje` en cargos para enriquecer el reporte (hoy solo Conducción, valorización 0).
+1. **Parametrizar** establecimiento/año en `rpt_min02()` (hoy hardcodeados en 1400/2020), p.ej. por query string `/reporte/min_02?estab=...&anio=...`.
 2. Portar el path `callback1query` (Doctrine) de `WrapTcpLib` a Eloquent si se necesita paginación por query (hoy se usa `callback1hash`).
 3. Portar el código legacy en desuso de `ReportMin02` (`mylongprocActions`, `get_cnt1data`, `cbk_firma`) si se necesitan procesos largos o firmas.
 

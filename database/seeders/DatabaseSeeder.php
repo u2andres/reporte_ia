@@ -22,7 +22,10 @@ class DatabaseSeeder extends Seeder
             'email' => 'test@example.com',
         ]);
 
-        // Datos de prueba para el reporte rpt_min02
-        $this->call(PofReportSeeder::class);
+        // OJO: NO ejecutar PofReportSeeder aquí.
+        // Los modelos PofP* ahora usan la conexión 'doctrine' (MySQL con datos
+        // REALES). Correr el seeder haría truncate/insert sobre esa base.
+        // El seeder se conserva solo como fixture histórico para SQLite.
+        // $this->call(PofReportSeeder::class);
     }
 }

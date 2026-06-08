@@ -24,7 +24,7 @@ Guía de la migración de la clase legacy **`WrapTcpLib`** para que funcione en 
 - [Cómo probar](#cómo-probar)
 - [Verificación realizada](#verificación-realizada)
 - [Segundo reporte: rpt_min02 (orquestador)](#segundo-reporte-rpt_min02-orquestador)
-- [Capa de datos: modelos Eloquent (A + B)](#capa-de-datos-modelos-eloquent-a--b)
+- [Capa de datos: modelos Eloquent y MySQL real (A + B + C)](#capa-de-datos-modelos-eloquent-y-mysql-real-a--b--c)
 - [Pendientes y advertencias](#pendientes-y-advertencias)
 
 ---
@@ -273,7 +273,7 @@ Los **callbacks** del YAML (`mk_header`, `mk_footer`, `cbk_conduccion`, `cbk_tot
 
 ### Datos: de mocks a Eloquent
 
-Originalmente los `cbk_*` devolvían datos fijos vía `json_decode()` (mocks de las consultas Doctrine `PofPTable`). **Ahora consultan la base de datos** mediante métodos Eloquent en el modelo `PofP` — ver [Capa de datos](#capa-de-datos-modelos-eloquent-a--b). Los `$json_mock` quedaron **comentados** como referencia del formato esperado.
+Originalmente los `cbk_*` devolvían datos fijos vía `json_decode()` (mocks de las consultas Doctrine `PofPTable`). **Ahora consultan la base de datos** mediante métodos Eloquent en el modelo `PofP` — ver [Capa de datos](#capa-de-datos-modelos-eloquent-y-mysql-real-a--b--c). Los `$json_mock` quedaron **comentados** como referencia del formato esperado.
 
 ### Logo y K_PATH_IMAGES
 
@@ -294,9 +294,9 @@ if (! defined('K_PATH_IMAGES')) {
 
 ---
 
-## Capa de datos: modelos Eloquent (A + B)
+## Capa de datos: modelos Eloquent y MySQL real (A + B + C)
 
-Para que `rpt_min02` deje de usar mocks y consulte datos reales, se mapearon las tablas legacy (Doctrine 1.2) a modelos Eloquent y se portaron las consultas.
+Para que `rpt_min02` deje de usar mocks y consulte datos reales, se mapearon las tablas legacy (Doctrine 1.2) a modelos Eloquent (A), se portaron las consultas (B) y se conectó a la base MySQL real vía una conexión dedicada (C).
 
 ### A) Modelos, migraciones y seeder
 
@@ -338,6 +338,32 @@ Usan las relaciones (`with(['cargo','turno'])`, `whereHas('cargo', ...)`) para f
 - `get_sumt1cargo(1400, 2020, 'C')` = **90**; año previo (2019) = 0.
 - `get_hmix1cargo(...)` = 10 cargos, `cnt_actual` suma **90**; `cargo1d` = "75 - SUPERVISOR …", `turno1d` = "Completo".
 - Reporte `GET /reporte/min_02` con datos desde la base: **49.189 bytes** — idéntico byte a byte a la versión con mocks (mismos datos → mismo PDF).
+
+### C) Conexión a la base MySQL real (`doctrine`)
+
+En el esquema Doctrine original estas tablas vivían en una conexión aparte (`connection: doctrine`). Se replicó esa idea: una **conexión dedicada** para las tablas legacy de MySQL, dejando las tablas propias de Laravel (users, sessions, cache, jobs) en SQLite.
+
+- **`config/database.php`** → nueva conexión `doctrine` (driver `mysql`), parametrizada por variables `DB_DOCTRINE_*`:
+
+  ```env
+  DB_DOCTRINE_HOST=127.0.0.1
+  DB_DOCTRINE_PORT=3306
+  DB_DOCTRINE_DATABASE=<base>
+  DB_DOCTRINE_USERNAME=<usuario>
+  DB_DOCTRINE_PASSWORD=<password>
+  ```
+
+- Los 5 modelos declaran **`protected $connection = 'doctrine';`** → leen de MySQL. El resto de la app sigue en SQLite (no se toca la base real).
+
+- **Solo lectura:** las tablas ya existen con datos. Para que `db:seed`/`migrate --seed` no escriba sobre ellas:
+  - `PofReportSeeder` se **desregistró** de `DatabaseSeeder`.
+  - `PofReportSeeder::run()` aborta si detecta que los modelos usan la conexión `doctrine` (guard de seguridad).
+
+#### Verificación con datos reales
+
+Probado contra una base real (MariaDB 10.1): conexión OK, las 5 tablas existen (`680_POF_P` ~33.7k filas) y las columnas coinciden con el mapeo. El reporte `GET /reporte/min_02` para el establecimiento 1400 / año 2020 trae **11 cargos de Conducción reales** (suma 90) y genera el PDF (`200 OK`, ~49 KB).
+
+> ⚠️ **MariaDB/MySQL viejo:** la introspección de esquema de Laravel (`getColumnListing`, `migrate`, `db:show` sobre la conexión `doctrine`) falla por la columna `generation_expression` (sólo existe en MySQL 5.7+). **No afecta las consultas de datos** del reporte (SELECT/WHERE/aggregates normales); simplemente no usar comandos de *schema* contra `doctrine`.
 
 ---
 

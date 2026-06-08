@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class CargoPofP extends Model
 {
+    protected $connection = 'doctrine';
     protected $table = '652_CARGO_POF_P';
     protected $primaryKey = 'c652_id';
     public $timestamps = false;
