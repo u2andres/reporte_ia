@@ -294,6 +294,31 @@ Documentado en [INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md) (subsección "E)
 
 ---
 
+## 12. Frontend: jQuery + jQuery UI, layout `longproc` y página demo
+
+**Pedidos:** _"se instalo jquey y jquery-ui con npm, quedo correcto?"_ → _"armame un layout de blade longProc"_ → _"creame la pagina demo"_.
+
+### jQuery / jQuery UI
+
+- Diagnóstico: jQuery se había instalado en **4.0.0**, incompatible con `jquery-ui-dist@1.13.3` (que pide `>=1.8.0 <4.0.0`). Se fijó jQuery a **3.7.1**.
+- Wiring a Vite: `bootstrap.js` deja `window.$ = window.jQuery`, `app.js` importa `jquery-ui-dist/jquery-ui.js` (después de bootstrap), `app.css` importa el theme. `npm run build` OK.
+
+### Layout `longproc`
+
+[resources/views/layouts/longproc.blade.php](resources/views/layouts/longproc.blade.php): layout maestro con barra de progreso de jQuery UI y API global `window.LongProc` (`start/set/indeterminate/done/fail/hide`) + evento `longproc:ready`.
+
+### Página demo
+
+[resources/views/reportes/min02_demo.blade.php](resources/views/reportes/min02_demo.blade.php) + [ReporteController::min02Demo()](app/Http/Controllers/ReporteController.php) + ruta `GET /reporte/min_02-demo` (`reporte.min02.demo`). Genera `rpt_min02` de varios establecimientos vía `fetch`, mostrando el progreso y links a cada PDF.
+
+### Gotcha resuelto (módulo diferido)
+
+El JS de página fallaba con `$ is not defined`: `@vite` carga `app.js` como `<script type="module">` (diferido), así que un inline con `$(function(){})` corre **antes** de que exista `window.$`. Se corrigió envolviendo en `document.addEventListener('DOMContentLoaded', …)` y usando `window.jQuery`. **Verificado funcionando** por el usuario.
+
+Documentado en [INTEGRAR-JQUERY-UI.md](INTEGRAR-JQUERY-UI.md).
+
+---
+
 ## Estado final del proyecto
 
 - Documentación del proyecto en español ([README.md](README.md)).
@@ -303,6 +328,7 @@ Documentado en [INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md) (subsección "E)
   - `GET /reporte/min_02?estab=&anio=` (reporte real "Planta Completa Valorizada", orquestador `ReportMin02`, **datos reales desde MySQL**, parametrizado por establecimiento/año).
 - **Capa de datos Eloquent** mapeando el esquema legacy (`PofP` + `CargoPofP`/`TurnoPofP`/`EstablecimientoPofP`/`HistoriaPofP` + catálogos `AreaPofP`/`ModalidadPofP`/`DistritoEscolarPofP`), leyendo de la **base MySQL real** (`sdo_db`) vía la conexión dedicada `doctrine`. El encabezado muestra nombres reales (Área/Modalidad/D.E.).
 - Comando `php artisan pdf:import-font` para gestionar fuentes de tc-lib-pdf.
+- **Frontend:** jQuery 3.7.1 + jQuery UI 1.13.3 integrados a Vite; layout `layouts.longproc` (barra de progreso, API `LongProc`) y página demo `GET /reporte/min_02-demo` ([INTEGRAR-JQUERY-UI.md](INTEGRAR-JQUERY-UI.md)).
 
 ## Próximos pasos pendientes
 

@@ -311,4 +311,16 @@ class ReporteController extends Controller
         ]);
     }
 
+    /**
+     * Página demo (layout longproc): genera rpt_min02 para varios
+     * establecimientos mostrando una barra de progreso (jQuery UI).
+     */
+    public function min02Demo(): \Illuminate\View\View
+    {
+        return view('reportes.min02_demo', [
+            'ejemplos' => [1400, 3510, 3520],
+            'anio'     => 2020,
+        ]);
+    }
+
 }
