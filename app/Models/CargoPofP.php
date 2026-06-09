@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -47,8 +48,13 @@ class CargoPofP extends Model
         return $this->hasMany(PofP::class, 'c680_652_id', 'c652_id');
     }
 
-    // Relaciones a modelos aún no creados (Area/TipoCargo/Categoria/Nivel/Modalidad):
-    // public function area(): BelongsTo { return $this->belongsTo(AreaPofP::class, 'c652_650_id', 'id'); }
+    // Área del cargo (catálogo 650, PK char 1).
+    public function area(): BelongsTo
+    {
+        return $this->belongsTo(AreaPofP::class, 'c652_650_id', 'c650_id');
+    }
+
+    // Relaciones a modelos aún no creados (TipoCargo/Categoria/Nivel/Modalidad):
     // public function tipoCargo(): BelongsTo { return $this->belongsTo(TipoCargoPofP::class, 'c652_685_id', 'id'); }
     // public function categoriaCargo(): BelongsTo { return $this->belongsTo(CategoriaCargoPofP::class, 'c652_688_id', 'id'); }
     // public function nivel(): BelongsTo { return $this->belongsTo(NivelPofP::class, 'c652_672_id', 'id'); }

@@ -266,9 +266,31 @@ Documentado en [INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md) (subsección "C)
 
 **Verificación HTTP:** default y `/1400/2020` → 200 (~49 KB); `/3510` y `/3510/2020` (156 filas, C/E/H) → 200 (~62 KB); query string equivalente → 200; `/999999999` → 404.
 
-**Limitación cosmética:** los datos numéricos son correctos para cualquier estab/año, pero **Área** (mapa best-effort), **Modalidad** (código) y **D.E.** (distrito_escolar_id) no muestran nombres completos por falta de las tablas de catálogo (650/664/657).
+**Limitación cosmética:** (resuelta luego en la sección 11) inicialmente **Área**/**Modalidad**/**D.E.** mostraban códigos por falta de catálogos.
 
 Documentado en [INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md) (subsección "D) Reporte parametrizado").
+
+---
+
+## 11. Catálogos: nombres reales en el encabezado (Área, Modalidad, D.E.)
+
+**Pedido:** _"tengo el archivo de esquema Doctrine 1.2 para modelar Área 650, Modalidad 664, Distrito 657"_ → modelarlos.
+
+Se modelaron 3 catálogos (conexión `doctrine`, solo lectura) para mostrar nombres en vez de códigos:
+
+| Modelo | Tabla | PK | Campo nombre |
+|--------|-------|----|--------------|
+| [AreaPofP](app/Models/AreaPofP.php) | `650_AREA_POF_P` | `c650_id` (char1) | `c650_descripcion` |
+| [ModalidadPofP](app/Models/ModalidadPofP.php) | `664_MODALIDAD_POF_P` | `c664_id` | `c664_descripcion` |
+| [DistritoEscolarPofP](app/Models/DistritoEscolarPofP.php) | `657_DISTRITO_ESCOLAR_POF_P` | `c657_id` | `c657_de` |
+
++ migraciones y relaciones (`ModalidadPofP→area`, `EstablecimientoPofP→areaRel/modalidadRel/distrito`, `CargoPofP→area`).
+
+**Hallazgo clave:** la columna `area` del establecimiento viene **vacía**; el área real se deriva por **Establecimiento → Modalidad (`c658_664_id`) → `c664_650_id` → Área**. El controlador `rpt_min02` resuelve así Área, Modalidad y el nº real de D.E. (`c657_de`, no la FK).
+
+**Verificación** (17 áreas, 69 modalidades, 21 distritos): estab 1400 → "Supervisión" / "Gestión Privada" (D) / D.E. 9; estab 3510 → "Unid. Pedagógica" / "Formación Docente" (G) / D.E. 1. Reportes 200 OK (~49 KB y ~62 KB).
+
+Documentado en [INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md) (subsección "E) Catálogos").
 
 ---
 
@@ -279,15 +301,14 @@ Documentado en [INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md) (subsección "D)
 - **WrapTcpLib + TCPDF clásico** migrado, funcionando y documentado ([INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md)):
   - `GET /reporte/cursos` (reporte simple, datos de ejemplo).
   - `GET /reporte/min_02?estab=&anio=` (reporte real "Planta Completa Valorizada", orquestador `ReportMin02`, **datos reales desde MySQL**, parametrizado por establecimiento/año).
-- **Capa de datos Eloquent** mapeando el esquema legacy (`PofP` + `CargoPofP`/`TurnoPofP`/`EstablecimientoPofP`/`HistoriaPofP`), leyendo de la **base MySQL real** (`sdo_db`) vía la conexión dedicada `doctrine`.
+- **Capa de datos Eloquent** mapeando el esquema legacy (`PofP` + `CargoPofP`/`TurnoPofP`/`EstablecimientoPofP`/`HistoriaPofP` + catálogos `AreaPofP`/`ModalidadPofP`/`DistritoEscolarPofP`), leyendo de la **base MySQL real** (`sdo_db`) vía la conexión dedicada `doctrine`. El encabezado muestra nombres reales (Área/Modalidad/D.E.).
 - Comando `php artisan pdf:import-font` para gestionar fuentes de tc-lib-pdf.
 
 ## Próximos pasos pendientes
 
-1. Modelar las **tablas de catálogo** (Área 650, Modalidad 664, Distrito 657) para mostrar nombres completos en el encabezado (hoy: Área best-effort, Modalidad/D.E. como código).
-2. Portar el path `callback1query` (Doctrine) de `WrapTcpLib` a Eloquent si se necesita paginación por query (hoy se usa `callback1hash`).
-3. Portar el código legacy en desuso de `ReportMin02` (`mylongprocActions`, `get_cnt1data`, `cbk_firma`) si se necesitan procesos largos o firmas.
+1. Portar el path `callback1query` (Doctrine) de `WrapTcpLib` a Eloquent si se necesita paginación por query (hoy se usa `callback1hash`).
+2. Portar el código legacy en desuso de `ReportMin02` (`mylongprocActions`, `get_cnt1data`, `cbk_firma`) si se necesitan procesos largos o firmas.
 
 ---
 
-_Generado a partir del trabajo realizado en la sesión (2026-06-05 → 2026-06-08)._
+_Generado a partir del trabajo realizado en la sesión (2026-06-05 → 2026-06-09)._

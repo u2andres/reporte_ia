@@ -24,7 +24,7 @@ Guía de la migración de la clase legacy **`WrapTcpLib`** para que funcione en 
 - [Cómo probar](#cómo-probar)
 - [Verificación realizada](#verificación-realizada)
 - [Segundo reporte: rpt_min02 (orquestador)](#segundo-reporte-rpt_min02-orquestador)
-- [Capa de datos: Eloquent, MySQL real y parametrización (A + B + C + D)](#capa-de-datos-eloquent-mysql-real-y-parametrización-a--b--c--d)
+- [Capa de datos: Eloquent, MySQL real, parametrización y catálogos (A + B + C + D + E)](#capa-de-datos-eloquent-mysql-real-parametrización-y-catálogos-a--b--c--d--e)
 - [Pendientes y advertencias](#pendientes-y-advertencias)
 
 ---
@@ -273,7 +273,7 @@ Los **callbacks** del YAML (`mk_header`, `mk_footer`, `cbk_conduccion`, `cbk_tot
 
 ### Datos: de mocks a Eloquent
 
-Originalmente los `cbk_*` devolvían datos fijos vía `json_decode()` (mocks de las consultas Doctrine `PofPTable`). **Ahora consultan la base de datos** mediante métodos Eloquent en el modelo `PofP` — ver [Capa de datos](#capa-de-datos-eloquent-mysql-real-y-parametrización-a--b--c--d). Los `$json_mock` quedaron **comentados** como referencia del formato esperado.
+Originalmente los `cbk_*` devolvían datos fijos vía `json_decode()` (mocks de las consultas Doctrine `PofPTable`). **Ahora consultan la base de datos** mediante métodos Eloquent en el modelo `PofP` — ver [Capa de datos](#capa-de-datos-eloquent-mysql-real-parametrización-y-catálogos-a--b--c--d--e). Los `$json_mock` quedaron **comentados** como referencia del formato esperado.
 
 ### Logo y K_PATH_IMAGES
 
@@ -294,9 +294,9 @@ if (! defined('K_PATH_IMAGES')) {
 
 ---
 
-## Capa de datos: Eloquent, MySQL real y parametrización (A + B + C + D)
+## Capa de datos: Eloquent, MySQL real, parametrización y catálogos (A + B + C + D + E)
 
-Para que `rpt_min02` deje de usar mocks y consulte datos reales, se mapearon las tablas legacy (Doctrine 1.2) a modelos Eloquent (A), se portaron las consultas (B), se conectó a la base MySQL real vía una conexión dedicada (C) y se parametrizó el reporte por establecimiento/año (D).
+Para que `rpt_min02` deje de usar mocks y consulte datos reales, se mapearon las tablas legacy (Doctrine 1.2) a modelos Eloquent (A), se portaron las consultas (B), se conectó a la base MySQL real vía una conexión dedicada (C), se parametrizó el reporte por establecimiento/año (D) y se modelaron los catálogos para mostrar nombres reales en el encabezado (E).
 
 ### A) Modelos, migraciones y seeder
 
@@ -398,7 +398,41 @@ Flujo:
 
 Verificado por HTTP: `/reporte/min_02` y `/reporte/min_02/1400/2020` → 200 (~49 KB); `/reporte/min_02/3510` y `/reporte/min_02/3510/2020` (156 filas, C/E/H) → 200 (~62 KB); query string equivalente → 200; `/reporte/min_02/999999999` → **404**.
 
-> **Limitación (cosmética, no de datos):** los **datos numéricos** son correctos para cualquier estab/año, pero algunos campos **descriptivos** del encabezado no tienen tabla de nombres modelada: **Área** usa un mapa best-effort (`A`→Adultos, `D`→Gestión Privada; resto muestra "Área &lt;letra&gt;"), **Modalidad** muestra el código (falta catálogo 664) y **D.E.** muestra el `distrito_escolar_id`. Para nombres completos habría que modelar las tablas de catálogo (Área 650, Modalidad 664, Distrito 657) y resolverlos por join.
+> Los campos **descriptivos** del encabezado (Área, Modalidad, D.E.) se resuelven con sus nombres reales desde los catálogos — ver [E) Catálogos](#e-catálogos-nombres-reales-en-el-encabezado).
+
+### E) Catálogos: nombres reales en el encabezado
+
+Para que el encabezado muestre nombres (no códigos), se modelaron tres tablas de catálogo (Doctrine 1.2), con `protected $connection = 'doctrine'`:
+
+| Modelo | Tabla | PK | Campo nombre |
+|--------|-------|----|--------------|
+| [AreaPofP](app/Models/AreaPofP.php) | `650_AREA_POF_P` | `c650_id` (char 1) | `c650_descripcion` |
+| [ModalidadPofP](app/Models/ModalidadPofP.php) | `664_MODALIDAD_POF_P` | `c664_id` | `c664_descripcion` |
+| [DistritoEscolarPofP](app/Models/DistritoEscolarPofP.php) | `657_DISTRITO_ESCOLAR_POF_P` | `c657_id` | `c657_de` (número de D.E.) |
+
+Relaciones agregadas: `ModalidadPofP→area`, `EstablecimientoPofP→areaRel/modalidadRel/distrito` (nombres distintos de las columnas `area`/`modalidad` para no chocar con el atributo), `CargoPofP→area`.
+
+**Resolución en el controlador** (`rpt_min02`):
+
+- **Modalidad:** `ModalidadPofP::find($estabRow->c658_664_id)?->c664_descripcion`.
+- **Área:** ⚠️ la columna `area` del establecimiento **viene vacía**; el área real se deriva por la cadena **Establecimiento → Modalidad (`c658_664_id`) → `c664_650_id` → Área**:
+  ```php
+  $cod_area = $modRow?->c664_650_id ?: (string) $estabRow->area;
+  $area     = AreaPofP::find($cod_area)?->c650_descripcion ?? ('Área ' . $cod_area);
+  ```
+- **D.E.:** el número real es `c657_de` del distrito, no la FK `c658_657_id`:
+  `DistritoEscolarPofP::find($estabRow->c658_657_id)?->c657_de`.
+
+Esto además corrige `cod_area` (usado por `get_h1cargo1area` para los totales por área), que antes quedaba vacío.
+
+**Verificación con datos reales** (catálogos: 17 áreas, 69 modalidades, 21 distritos):
+
+| Establecimiento | Modalidad | Área (derivada) | D.E. |
+|-----------------|-----------|-----------------|------|
+| 1400 SUPERVISION GESTION PRIVADA | Supervisión | Gestión Privada (`D`) | 9 |
+| 3510 E.N.S. 1… | Unid. Pedagógica | Formación Docente (`G`) | 1 |
+
+> Las migraciones de estos catálogos existen (esquema-como-código) pero, como el resto de tablas legacy, **solo se leen desde MySQL** vía la conexión `doctrine`.
 
 ---
 

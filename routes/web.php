@@ -15,7 +15,11 @@ Route::get('/reporte/cursos', [ReporteController::class, 'cursos'])->name('repor
 
 // Reporte de wsad(Planta Completa Valorizada), con WrapTcpLib (TCPDF clásico)
 // Parámetros opcionales de ruta: estab (establecimiento) y anio (año).
-//   /reporte/min_02                -> default 1400 / 2020
+//   /reporte/min_02/               -> default 1400 / 2020
 //   /reporte/min_02/3510           -> estab 3510, año 2020
 //   /reporte/min_02/3510/2019      -> estab 3510, año 2019
 Route::get('/reporte/min_02/{estab?}/{anio?}', [ReporteController::class, 'rpt_min02'])->name('reporte.rpt_min02');
+
+// si se agrega esta FORMA, SOLO FUNCIONA :
+//   /reporte/min_02/ue/3510/anio/2019      -> estab 3510, año 2019
+// Route::get('/reporte/min_02/ue/{estab?}/anio/{anio?}', [ReporteController::class, 'rpt_min02'])->name('reporte.rpt_min02');

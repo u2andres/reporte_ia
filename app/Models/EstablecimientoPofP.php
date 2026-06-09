@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -53,6 +54,23 @@ class EstablecimientoPofP extends Model
     public function historias(): HasMany
     {
         return $this->hasMany(HistoriaPofP::class, 'c661_658_id', 'c658_id');
+    }
+
+    // Catálogos (nombre del método distinto de las columnas 'area'/'modalidad'
+    // para no chocar con el atributo).
+    public function areaRel(): BelongsTo
+    {
+        return $this->belongsTo(AreaPofP::class, 'area', 'c650_id');
+    }
+
+    public function modalidadRel(): BelongsTo
+    {
+        return $this->belongsTo(ModalidadPofP::class, 'c658_664_id', 'c664_id');
+    }
+
+    public function distrito(): BelongsTo
+    {
+        return $this->belongsTo(DistritoEscolarPofP::class, 'c658_657_id', 'c657_id');
     }
 
     // ----- Accesores (alias Doctrine, los más usados) -----

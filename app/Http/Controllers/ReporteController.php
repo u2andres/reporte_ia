@@ -6,7 +6,10 @@ use Com\Tecnick\Pdf\Tcpdf;
 use Illuminate\Http\Response;
 use App\Libraries\WrapTcpLib;
 use App\Libraries\Reports\ReportMin02;
+use App\Models\AreaPofP;
+use App\Models\DistritoEscolarPofP;
 use App\Models\EstablecimientoPofP;
+use App\Models\ModalidadPofP;
 use Illuminate\Http\Request;
 
 class ReporteController extends Controller
@@ -147,11 +150,26 @@ class ReporteController extends Controller
             abort(404, "No existe el establecimiento {$estab}.");
         }
 
-        // Código de área (1 letra) -> nombre. El catálogo completo vendría de
-        // la tabla de Áreas (650), aún no modelada; mapa best-effort por ahora.
-        $cod_area  = (string) $estabRow->area;
-        $areaNames = ['A' => 'Adultos', 'D' => 'Gestión Privada'];
-        $area      = $areaNames[$cod_area] ?? ('Área ' . $cod_area);
+        // Nombres reales desde los catálogos (MySQL): Modalidad (664), Área
+        // (650) y Distrito Escolar (657). Si falta el dato, cae a un fallback.
+
+        // Modalidad (catálogo 664): nombre + área asociada.
+        $cod_modalidad   = $estabRow->c658_664_id;
+        $modRow          = $cod_modalidad ? ModalidadPofP::find($cod_modalidad) : null;
+        $modalidadNombre = $modRow?->c664_descripcion ?? (string) $estabRow->modalidad;
+
+        // El área se deriva de la modalidad (c664_650_id); el establecimiento
+        // suele traerla vacía. Cae al campo del establecimiento si falta.
+        $cod_area = $modRow?->c664_650_id ?: (string) $estabRow->area;
+        $area     = ($cod_area !== ''
+            ? AreaPofP::find($cod_area)?->c650_descripcion
+            : null) ?? ('Área ' . $cod_area);
+
+        // El "D.E." real es c657_de del distrito, no la FK c658_657_id.
+        $distrito = $estabRow->c658_657_id
+            ? DistritoEscolarPofP::find($estabRow->c658_657_id)
+            : null;
+        $deNumero = $distrito?->c657_de ?? $estabRow->c658_657_id;
 
         $ycfg_file      = 'multig_min02';
         $tag            = 'min_pof_02';
@@ -210,14 +228,14 @@ class ReporteController extends Controller
            'escuela'        => $estabRow->c658_escuela,
            'direccion'      => $estabRow->c658_direccion,
            'codigo'         => $estabRow->c658_id,
-           'cod_modalidad'  => $estabRow->c658_664_id,
-           'modalidad'      => $estabRow->modalidad,      // código (sin tabla de nombres)
+           'cod_modalidad'  => $cod_modalidad,
+           'modalidad'      => $modalidadNombre,          // nombre real (catálogo 664)
            'cod_area'       => $cod_area,
-           'area'           => $area,
+           'area'           => $area,                     // nombre real (catálogo 650)
            'cod_tipo_curso' => null,
            'tipo_curso'     => $tipo_curso,
-           'cod_de'         => $estabRow->c658_657_id,
-           'de'             => $estabRow->c658_657_id,
+           'cod_de'         => $deNumero,
+           'de'             => $deNumero,                 // nº de D.E. real (catálogo 657)
            );
 
         // ...
