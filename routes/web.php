@@ -26,6 +26,10 @@ Route::get('/reporte/min_02-demo', [ReporteController::class, 'min02Demo'])->nam
 // Prueba de PDFMerger (combina los PDFs de app/Libraries/test/)
 Route::get('/reporte/merge-test', [ReporteController::class, 'mergeTest'])->name('reporte.merge.test');
 
+// Demo del helper longOps (diálogo jQuery UI con barra de progreso) + su backend
+Route::get('/reporte/longops-demo', [ReporteController::class, 'longopsDemo'])->name('reporte.longops.demo');
+Route::get('/reporte/longops/backend', [ReporteController::class, 'longopsBackend'])->name('reporte.longops.backend');
+
 // si se agrega esta FORMA, SOLO FUNCIONA :
 //   /reporte/min_02/ue/3510/anio/2019      -> estab 3510, año 2019
 // Route::get('/reporte/min_02/ue/{estab?}/anio/{anio?}', [ReporteController::class, 'rpt_min02'])->name('reporte.rpt_min02');

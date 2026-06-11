@@ -374,4 +374,54 @@ class ReporteController extends Controller
         ]);
     }
 
+    /**
+     * Página demo del helper longOps (diálogo jQuery UI con barra de progreso).
+     * Ver resources/js/longops/longops.jQuery.js.
+     */
+    public function longopsDemo(): \Illuminate\View\View
+    {
+        return view('reportes.longops_demo');
+    }
+
+    /**
+     * Backend del helper longOps. Protocolo (texto plano):
+     *   respuesta = "<estado>|<porcentaje>|<comentario>"
+     *   estado = working | finished | aborted
+     * Acciones (longops_action): start -> resume (loop) -> finished/aborted.
+     * El progreso se mantiene en sesión entre llamadas AJAX.
+     */
+    public function longopsBackend(Request $request): Response
+    {
+        $action  = (string) $request->input('longops_action', 'start');
+        $headers = ['Content-Type' => 'text/plain; charset=utf-8'];
+
+        if ($action === 'start') {
+            $total = max(1, (int) $request->input('total', 10));
+            $request->session()->put('longop', ['step' => 0, 'total' => $total]);
+            return response('working|0|Iniciando…', 200, $headers);
+        }
+
+        $state = $request->session()->get('longop', ['step' => 0, 'total' => 10]);
+        $total = (int) $state['total'];
+
+        if ($action === 'abort') {
+            $pct = (int) round($state['step'] / $total * 100);
+            $request->session()->forget('longop');
+            return response("aborted|{$pct}|Operación cancelada.", 200, $headers);
+        }
+
+        // resume: avanza un paso (simula trabajo)
+        $state['step']++;
+        usleep(300000); // 0,3 s
+        $pct = (int) round($state['step'] / $total * 100);
+
+        if ($state['step'] >= $total) {
+            $request->session()->forget('longop');
+            return response("finished|100|Completado ({$total} pasos).", 200, $headers);
+        }
+
+        $request->session()->put('longop', $state);
+        return response("working|{$pct}|Paso {$state['step']} de {$total}…", 200, $headers);
+    }
+
 }
