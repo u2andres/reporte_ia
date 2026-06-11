@@ -342,6 +342,28 @@ Documentado en [INTEGRAR-PDFMERGER.md](INTEGRAR-PDFMERGER.md).
 
 ---
 
+## 14. longOps: diálogo de progreso para operaciones largas
+
+**Pedido:** _"se agregó resources/js/longops/longops.jQuery.js (diálogo jQuery UI con barra de progreso), agregar controlador y vista para probarlo"_.
+
+`longOps` (Selifonov, 2013) abre un diálogo modal de jQuery UI con barra de progreso que hace polling AJAX a un backend (`start → resume → finished/aborted`, texto plano `estado|pct|comentario`, estado en sesión).
+
+### Armado
+- Se importó desde [app.js](resources/js/app.js) (define `window.longOps`).
+- **Backend** [ReporteController::longopsBackend()](app/Http/Controllers/ReporteController.php) → `GET /reporte/longops/backend`: implementa el protocolo con avance en sesión.
+- **Vista** [longops_demo.blade.php](resources/views/reportes/longops_demo.blade.php) (extiende `layouts.longproc`) + `GET /reporte/longops-demo`.
+
+### Tres arreglos necesarios (jQuery moderno)
+1. `longOps =` → **`window.longOps =`** (ESM strict mode).
+2. `<div id='progress_bar' />` → **`<div id='progress_bar'></div>`** — el `<div/>` auto-cerrado no cierra en jQuery 3.x, anidaba el contenido y la barra **no actualizaba**.
+3. **autoClose también en `aborted`** — al **cancelar** el diálogo no se cerraba (autoClose solo miraba `finished`; sin botón Cerrar / "X" oculta). Ahora autocierra a los 2 s también al cancelar.
+
+Verificado: backend `start→resume→finished/aborted` OK por curl; página demo 200.
+
+Documentado en [INTEGRAR-JQUERY-UI.md](INTEGRAR-JQUERY-UI.md) (sección "longOps").
+
+---
+
 ## Estado final del proyecto
 
 - Documentación del proyecto en español ([README.md](README.md)).
@@ -351,7 +373,7 @@ Documentado en [INTEGRAR-PDFMERGER.md](INTEGRAR-PDFMERGER.md).
   - `GET /reporte/min_02?estab=&anio=` (reporte real "Planta Completa Valorizada", orquestador `ReportMin02`, **datos reales desde MySQL**, parametrizado por establecimiento/año).
 - **Capa de datos Eloquent** mapeando el esquema legacy (`PofP` + `CargoPofP`/`TurnoPofP`/`EstablecimientoPofP`/`HistoriaPofP` + catálogos `AreaPofP`/`ModalidadPofP`/`DistritoEscolarPofP`), leyendo de la **base MySQL real** (`sdo_db`) vía la conexión dedicada `doctrine`. El encabezado muestra nombres reales (Área/Modalidad/D.E.).
 - Comando `php artisan pdf:import-font` para gestionar fuentes de tc-lib-pdf.
-- **Frontend:** jQuery 3.7.1 + jQuery UI 1.13.3 integrados a Vite; layout `layouts.longproc` (barra de progreso, API `LongProc`) y página demo `GET /reporte/min_02-demo` ([INTEGRAR-JQUERY-UI.md](INTEGRAR-JQUERY-UI.md)).
+- **Frontend:** jQuery 3.7.1 + jQuery UI 1.13.3 integrados a Vite; layout `layouts.longproc` (API `LongProc`) + demo `GET /reporte/min_02-demo`; y helper `longOps` (diálogo de progreso con backend) + demo `GET /reporte/longops-demo` ([INTEGRAR-JQUERY-UI.md](INTEGRAR-JQUERY-UI.md)).
 - **Combinar PDFs:** `App\Libraries\PDFMerger` (TCPDI) + endpoint `GET /reporte/merge-test`; sirve para PDFs de TCPDF clásico (no para tc-lib-pdf) ([INTEGRAR-PDFMERGER.md](INTEGRAR-PDFMERGER.md)).
 
 ## Próximos pasos pendientes

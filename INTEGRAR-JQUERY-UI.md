@@ -11,6 +11,7 @@ Guía de la integración de **jQuery** y **jQuery UI** al build de **Vite** del 
 - [El gotcha del módulo diferido](#el-gotcha-del-módulo-diferido)
 - [Layout `longproc` y la API `LongProc`](#layout-longproc-y-la-api-longproc)
 - [Página demo](#página-demo)
+- [longOps: diálogo de progreso (operaciones largas)](#longops-diálogo-de-progreso-operaciones-largas)
 - [Notas y advertencias](#notas-y-advertencias)
 
 ---
@@ -176,6 +177,68 @@ php artisan serve   # o composer dev
 ```
 
 Abrir **http://localhost:8000/reporte/min_02-demo** → **Generar**.
+
+---
+
+## longOps: diálogo de progreso (operaciones largas)
+
+Helper [resources/js/longops/longops.jQuery.js](resources/js/longops/longops.jQuery.js) (Selifonov, 2013): abre un **diálogo modal de jQuery UI con barra de progreso** que va consultando un backend por AJAX hasta terminar. A diferencia de `LongProc` (que maneja vos el % desde JS), acá el **backend** dicta el progreso.
+
+### Carga
+
+Se importa desde [app.js](resources/js/app.js) (`import './longops/longops.jQuery.js'`) y queda como `window.longOps`. Requiere jQuery + jQuery UI (ya en el bundle).
+
+### Protocolo del backend (texto plano)
+
+El backend responde un string `"<estado>|<porcentaje>|<comentario>"`:
+
+| `longops_action` | Backend responde | Efecto |
+|------------------|------------------|--------|
+| `start` | `working|0|…` | inicializa (estado en sesión) |
+| `resume` | `working|<pct>|…` | avanza; el cliente vuelve a llamar `resume` |
+| (fin) | `finished|100|…` | termina → `onSuccess`, autocierra |
+| `abort` (al cancelar) | `aborted|<pct>|…` | cancela → `onCancel`, autocierra |
+
+El cliente hace polling: `start → resume → resume → … → finished` (o `aborted` si se aprieta Cancelar). El estado de avance se guarda en **sesión** entre llamadas.
+
+### Demo
+
+| Pieza | Archivo / ruta |
+|-------|----------------|
+| Vista | [resources/views/reportes/longops_demo.blade.php](resources/views/reportes/longops_demo.blade.php) |
+| Backend | [ReporteController::longopsBackend()](app/Http/Controllers/ReporteController.php) → `GET /reporte/longops/backend` (`reporte.longops.backend`) |
+| Página | [ReporteController::longopsDemo()](app/Http/Controllers/ReporteController.php) → `GET /reporte/longops-demo` (`reporte.longops.demo`) |
+
+```js
+longOps.start({ total: 10 }, {
+    title: 'Procesando…',
+    backend: '{{ route('reporte.longops.backend') }}',
+    btnStop: 'Cancelar',
+    autoClose: 2,                 // segundos para autocerrar al terminar/cancelar
+    onSuccess: fn, onCancel: fn, onError: fn,
+});
+```
+
+Backend (GET, en grupo `web` para tener sesión; sin CSRF por ser GET):
+
+```php
+$action = $request->input('longops_action', 'start');
+if ($action === 'start') { /* session: step=0,total */ return "working|0|Iniciando…"; }
+if ($action === 'abort') { return "aborted|{$pct}|Cancelada."; }
+// resume: step++ ; return $step>=$total ? "finished|100|…" : "working|{$pct}|Paso {$step}…";
+```
+
+### Dos arreglos necesarios (jQuery moderno)
+
+El helper es de 2013 (jQuery 1.4 / UI 1.8) y necesitó dos correcciones para funcionar hoy:
+
+1. **`window.longOps`** en vez de `longOps =` — los módulos ESM son *strict mode* y no permiten asignar a una variable global no declarada.
+2. **`<div id='progress_bar'></div>`** en vez de `<div id='progress_bar' />` — el parser HTML5 de jQuery 3.x **no cierra** los `<div/>` auto-cerrados, y el resto del contenido quedaba anidado dentro del progressbar, rompiendo la barra (no actualizaba).
+3. **autoClose también en `aborted`** — el cierre automático solo aplicaba a `finished`; al cancelar el diálogo quedaba abierto sin forma de cerrarlo (botón Cancelar deshabilitado, "X" oculta, botón Cerrar comentado). Ahora autocierra también al cancelar.
+
+> Si se usa `autoClose: 0`, conviene reponer el botón "Cerrar" (comentado en el `dialog({buttons:…})`), porque si no el diálogo no tendría forma de cerrarse al cancelar.
+
+Probar: **http://localhost:8000/reporte/longops-demo** → **Iniciar operación larga** (probá también **Cancelar**).
 
 ---
 
