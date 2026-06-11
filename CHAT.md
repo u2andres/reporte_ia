@@ -319,6 +319,29 @@ Documentado en [INTEGRAR-JQUERY-UI.md](INTEGRAR-JQUERY-UI.md).
 
 ---
 
+## 13. Combinar PDFs: PDFMerger (TCPDI)
+
+**Pedidos:** _"agregue una libreria para mergear pdfs y un test sample_merge.php, podes armar un controlador para probarla"_ → (FPDI no servía) → _"volver por la version A (tcpdi)"_ → sacar fpdi + documentar.
+
+Se integró `App\Libraries\PDFMerger` (combina PDFs) y un endpoint de prueba.
+
+### Recorrido
+- **Bundle incompleto:** `app/Libraries/tcpdf/` venía sin `fpdf_tpl.php` ni la carpeta `include/`. El usuario agregó `fpdf_tpl.php` y copió el `include/` del paquete pauln/tcpdi.
+- **Opción B (FPDI) descartada:** se instaló `setasign/fpdi`, pero su parser libre no soporta cross-reference comprimido (falla con los tc-lib-pdf). Reescribí PDFMerger a FPDI, no servía para esos PDFs → se **desinstaló** (`composer remove setasign/fpdi`).
+- **Opción A (TCPDI) adoptada:** PDFMerger usa TCPDI bundleado sobre el TCPDF de composer. Requirió el `include/tcpdf_filters.php` de pauln (el de TCPDF 6.11 rompe el FlateDecode).
+
+### Hallazgo de compatibilidad
+- ✅ **TCPDF clásico** (`cursos`, `rpt_min02`): se mergean bien (probado).
+- ❌ **tc-lib-pdf** (`reporte/test`, los `test_0X.pdf`): **ni tcpdi ni FPDI** pueden (`gzuncompress: invalid code`). Para esos haría falta Ghostscript/qpdf/pdftk o regenerarlos como TCPDF clásico.
+
+### Verificación
+- [ReporteController::mergeTest()](app/Http/Controllers/ReporteController.php) + ruta `GET /reporte/merge-test`: genera 3 PDFs (TCPDF clásico) y los combina → **200 OK**, 3 páginas.
+- `setasign/fpdi` quitado de composer; el merge sigue OK.
+
+Documentado en [INTEGRAR-PDFMERGER.md](INTEGRAR-PDFMERGER.md).
+
+---
+
 ## Estado final del proyecto
 
 - Documentación del proyecto en español ([README.md](README.md)).
@@ -329,12 +352,14 @@ Documentado en [INTEGRAR-JQUERY-UI.md](INTEGRAR-JQUERY-UI.md).
 - **Capa de datos Eloquent** mapeando el esquema legacy (`PofP` + `CargoPofP`/`TurnoPofP`/`EstablecimientoPofP`/`HistoriaPofP` + catálogos `AreaPofP`/`ModalidadPofP`/`DistritoEscolarPofP`), leyendo de la **base MySQL real** (`sdo_db`) vía la conexión dedicada `doctrine`. El encabezado muestra nombres reales (Área/Modalidad/D.E.).
 - Comando `php artisan pdf:import-font` para gestionar fuentes de tc-lib-pdf.
 - **Frontend:** jQuery 3.7.1 + jQuery UI 1.13.3 integrados a Vite; layout `layouts.longproc` (barra de progreso, API `LongProc`) y página demo `GET /reporte/min_02-demo` ([INTEGRAR-JQUERY-UI.md](INTEGRAR-JQUERY-UI.md)).
+- **Combinar PDFs:** `App\Libraries\PDFMerger` (TCPDI) + endpoint `GET /reporte/merge-test`; sirve para PDFs de TCPDF clásico (no para tc-lib-pdf) ([INTEGRAR-PDFMERGER.md](INTEGRAR-PDFMERGER.md)).
 
 ## Próximos pasos pendientes
 
-1. Portar el path `callback1query` (Doctrine) de `WrapTcpLib` a Eloquent si se necesita paginación por query (hoy se usa `callback1hash`).
-2. Portar el código legacy en desuso de `ReportMin02` (`mylongprocActions`, `get_cnt1data`, `cbk_firma`) si se necesitan procesos largos o firmas.
+1. **Reporte por área (`min_02_area`)**: combinar los `rpt_min02` de cada establecimiento con PDFMerger (son TCPDF clásico → compatibles). Quedó pendiente de implementar (un área grande tiene cientos de establecimientos → conviene tope/paginación).
+2. Portar el path `callback1query` (Doctrine) de `WrapTcpLib` a Eloquent si se necesita paginación por query (hoy se usa `callback1hash`).
+3. Portar el código legacy en desuso de `ReportMin02` (`mylongprocActions`, `get_cnt1data`, `cbk_firma`) si se necesitan procesos largos o firmas.
 
 ---
 
-_Generado a partir del trabajo realizado en la sesión (2026-06-05 → 2026-06-09)._
+_Generado a partir del trabajo realizado en la sesión (2026-06-05 → 2026-06-11)._

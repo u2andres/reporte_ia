@@ -23,6 +23,9 @@ Route::get('/reporte/min_02/{estab?}/{anio?}', [ReporteController::class, 'rpt_m
 // Página demo (layout longproc + barra de progreso jQuery UI)
 Route::get('/reporte/min_02-demo', [ReporteController::class, 'min02Demo'])->name('reporte.min02.demo');
 
+// Prueba de PDFMerger (combina los PDFs de app/Libraries/test/)
+Route::get('/reporte/merge-test', [ReporteController::class, 'mergeTest'])->name('reporte.merge.test');
+
 // si se agrega esta FORMA, SOLO FUNCIONA :
 //   /reporte/min_02/ue/3510/anio/2019      -> estab 3510, año 2019
 // Route::get('/reporte/min_02/ue/{estab?}/anio/{anio?}', [ReporteController::class, 'rpt_min02'])->name('reporte.rpt_min02');

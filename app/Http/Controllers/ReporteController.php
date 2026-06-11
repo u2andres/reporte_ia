@@ -132,11 +132,12 @@ class ReporteController extends Controller
         // ajusta el yaml de configuracion segun el listado...
         // ----------------------------------------------------
         /**
-         * ir al yaml de configuracion :
+        // ir al yaml de configuracion del reporte :
            - C:\eid\Xampp_82\htdocs\desarrollo\Lrvl_curso_reporte\app\Libraries\config\report\multig_min02_a4p.yml
-         */
+        // ir a los callbacks del reporte :
+           - C:\eid\Xampp_82\htdocs\desarrollo\Lrvl_curso_reporte\app\Libraries\Reports\ReportMin02.php
+        */
         
-        // ...        
         // ----------------------------------------------------------------
         // Parámetros estab/anio: por ruta (/reporte/min_02/{estab}/{anio})
         // o por query string (?estab=&anio=). Defaults: 1400 / 2020.
@@ -320,6 +321,56 @@ class ReporteController extends Controller
         return view('reportes.min02_demo', [
             'ejemplos' => [1400, 3510, 3520],
             'anio'     => 2020,
+        ]);
+    }
+
+    /**
+     * Prueba de App\Libraries\PDFMerger (TCPDI sobre TCPDF).
+     *
+     * Genera 3 PDFs con TCPDF clásico (xref tradicional, como los reportes del
+     * proyecto: cursos, rpt_min02) y los combina con PDFMerger.
+     *
+     * NOTA: los app/Libraries/test/test_0X.pdf son salida de tc-lib-pdf
+     * (PDF-1.7 con object/xref streams) y NO se pueden mergear con estas
+     * librerías PHP (ni tcpdi ni FPDI): el parser no logra inflar esos
+     * streams. Para mergear PDFs así haría falta una herramienta externa
+     * (Ghostscript/qpdf/pdftk) o regenerarlos como TCPDF clásico.
+     */
+    public function mergeTest(): Response
+    {
+        $files = [];
+        try {
+            // 1) Genera 3 PDFs compatibles (TCPDF clásico).
+            for ($i = 1; $i <= 3; $i++) {
+                $pdf = new \TCPDF('P', 'mm', 'A4', true, 'UTF-8');
+                $pdf->SetPrintHeader(false);
+                $pdf->SetPrintFooter(false);
+                $pdf->AddPage();
+                $pdf->SetFont('helvetica', 'B', 22);
+                $pdf->Cell(0, 20, "PDF de prueba #{$i}", 0, 1, 'C');
+                $pdf->SetFont('helvetica', '', 12);
+                $pdf->Write(0, 'Generado para probar App\\Libraries\\PDFMerger (TCPDI sobre TCPDF).');
+                $path = storage_path('app' . DIRECTORY_SEPARATOR . "_merge_src_{$i}.pdf");
+                $pdf->Output($path, 'F');
+                $files[] = $path;
+            }
+
+            // 2) Combina con PDFMerger (tcpdi).
+            $merger = new \App\Libraries\PDFMerger();
+            foreach ($files as $f) {
+                $merger->addPDF($f, 'all');     // o '1,3,4' / '1-2' para páginas sueltas
+            }
+            $raw = $merger->merge('string', 'merged.pdf');  // 'string' = devuelve el PDF como texto
+        } catch (\Throwable $e) {
+            foreach ($files as $f) { @unlink($f); }
+            abort(500, 'No se pudo mergear: ' . $e->getMessage());
+        }
+
+        foreach ($files as $f) { @unlink($f); }
+
+        return response($raw, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="merged.pdf"',
         ]);
     }
 

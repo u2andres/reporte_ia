@@ -33,6 +33,7 @@ Aplicación web construida con **Laravel 12**. El proyecto está pensado como ba
 | Frontend / build  | Vite 7                              |
 | CSS               | Tailwind CSS 4                       |
 | Reportes PDF      | tc-lib-pdf 8 ([guía](INTEGRAR-TC-LIB.md)) · TCPDF 6 / WrapTcpLib ([guía](INTEGRAR-WRAPTCPLIB.md)) |
+| Combinar PDFs     | TCPDI / PDFMerger ([guía](INTEGRAR-PDFMERGER.md)) |
 | UI / JS           | jQuery 3.7 + jQuery UI 1.13 ([guía](INTEGRAR-JQUERY-UI.md)) |
 | HTTP cliente JS   | Axios                               |
 | Cola / Cache / Sesión | driver `database`               |
