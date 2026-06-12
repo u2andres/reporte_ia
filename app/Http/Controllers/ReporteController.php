@@ -14,6 +14,9 @@ use Illuminate\Http\Request;
 
 class ReporteController extends Controller
 {
+    private $_maxtime   = 0;
+    private $_startTime = 0;
+
     /**
      * Genera un PDF de prueba con tc-lib-pdf y lo muestra en el navegador.
      *
@@ -422,6 +425,161 @@ class ReporteController extends Controller
 
         $request->session()->put('longop', $state);
         return response("working|{$pct}|Paso {$state['step']} de {$total}…", 200, $headers);
+    }
+
+    /**
+     * Página demo del reporte por área (longOps + backendArea).
+     * Pasa el catálogo de áreas para el desplegable.
+     */
+    public function longopsAreaDemo(): \Illuminate\View\View
+    {
+        $areas = AreaPofP::orderBy('c650_orden')->get(['c650_id', 'c650_descripcion']);
+        return view('reportes.longops_area_demo', ['areas' => $areas]);
+    }
+
+    /**
+     * Backend longOps del reporte POR ÁREA: genera el rpt_min02 de cada
+     * establecimiento del área y los combina (PDFMerger) en un solo PDF.
+     *
+     * Como un área puede tener cientos de establecimientos, se procesa en
+     * tandas: cada 'resume' trabaja dentro de un presupuesto de tiempo y
+     * deja el avance en sesión, hasta terminar. Al finalizar, mergea los
+     * PDFs por establecimiento y deja un link de descarga.
+     *
+     * Protocolo (texto plano): "<estado>|<porcentaje>|<comentario>".
+     * Params (en 'start', por ruta o query): area, anio, [limit].
+     */
+    public function longopsBackendArea(Request $request, $area = null, $anio = null): Response
+    {
+        // El rpt_min02 usa el logo (K_PATH_IMAGES).
+        if (! defined('K_PATH_IMAGES')) {
+            define('K_PATH_IMAGES', resource_path('reports' . DIRECTORY_SEPARATOR . 'images') . DIRECTORY_SEPARATOR);
+        }
+
+        $action  = (string) $request->input('longops_action', 'start');
+        $headers = ['Content-Type' => 'text/plain; charset=utf-8'];
+        $baseDir = storage_path('app' . DIRECTORY_SEPARATOR . 'longops');
+
+        // ---- start: arma la lista de establecimientos del área ----
+        if ($action === 'start') {
+            $area = (string) ($area ?? $request->query('area', 'A'));
+            $anio = (int) ($anio ?? $request->query('anio', 2020));
+
+            if (! AreaPofP::find($area)) {
+                return response("aborted|0|No existe el área '{$area}'.", 200, $headers);
+            }
+
+            $estabs = AreaPofP::getEstablecimientosArea($area, $anio);
+
+            // tope opcional (?limit=N) para pruebas / áreas grandes
+            $limit = (int) $request->query('limit', 0);
+            if ($limit > 0) {
+                $estabs = array_slice($estabs, 0, $limit);
+            }
+
+            if (empty($estabs)) {
+                return response("aborted|0|Sin establecimientos para el área '{$area}' año {$anio}.", 200, $headers);
+            }
+
+            $job = $area . '_' . $anio . '_' . substr(md5(uniqid('', true)), 0, 8);
+            $dir = $baseDir . DIRECTORY_SEPARATOR . $job;
+            if (! is_dir($dir)) {
+                mkdir($dir, 0775, true);
+            }
+
+            $request->session()->put('longop_area', [
+                'step'   => 0,
+                'total'  => count($estabs),
+                'estabs' => array_values($estabs),
+                'area'   => $area,
+                'anio'   => $anio,
+                'job'    => $job,
+            ]);
+
+            return response('working|0|Iniciando ' . count($estabs)
+                . " establecimiento(s) del área {$area}…", 200, $headers);
+        }
+
+        $state = $request->session()->get('longop_area');
+        if (! $state) {
+            return response('aborted|0|No hay un proceso de área activo.', 200, $headers);
+        }
+        $total = (int) $state['total'];
+        $dir   = $baseDir . DIRECTORY_SEPARATOR . $state['job'];
+
+        // ---- abort ----
+        if ($action === 'abort') {
+            $this->rrmdir($dir);
+            $request->session()->forget('longop_area');
+            $pct = (int) round($state['step'] / $total * 100);
+            return response("aborted|{$pct}|Operación cancelada.", 200, $headers);
+        }
+
+        // ---- resume: procesa establecimientos dentro de un presupuesto ----
+        $serverlimit    = (int) ini_get('max_execution_time');
+        $this->_maxtime = max(2, min((int) ceil(($serverlimit ?: 30) / 2), 10)); // seg por tanda
+        $this->_startTime = time();
+        $timedOut = fn () => (time() - $this->_startTime) >= $this->_maxtime;
+
+        while ($state['step'] < $total) {
+            $estab = $state['estabs'][$state['step']];
+
+            // genera el rpt_min02 del establecimiento y lo guarda en la tanda
+            $pdf = $this->rpt_min02($request, $estab, $state['anio'])->getContent();
+            file_put_contents($dir . DIRECTORY_SEPARATOR . sprintf('%05d.pdf', $state['step'] + 1), $pdf);
+
+            $state['step']++;
+
+            if ($state['step'] < $total && $timedOut()) {
+                $request->session()->put('longop_area', $state);
+                $pct = (int) round($state['step'] / $total * 100);
+                return response("working|{$pct}|Procesados {$state['step']} de {$total}…", 200, $headers);
+            }
+        }
+
+        // ---- terminado: mergea los PDFs por establecimiento ----
+        $merger = new \App\Libraries\PDFMerger();
+        foreach (glob($dir . DIRECTORY_SEPARATOR . '[0-9]*.pdf') as $f) {
+            $merger->addPDF($f, 'all');
+        }
+        file_put_contents($dir . DIRECTORY_SEPARATOR . 'RESULT.pdf', $merger->merge('string', 'area.pdf'));
+
+        $request->session()->forget('longop_area');
+        $url = route('reporte.longops.areaResult', ['job' => $state['job']]);
+        return response("finished|100|Listo ({$total} establec.). "
+            . "<a href=\"{$url}\" target=\"_blank\">Descargar PDF del área</a>", 200, $headers);
+    }
+
+    /**
+     * Descarga el PDF combinado de un proceso de área (longopsBackendArea).
+     */
+    public function longopsAreaResult(string $job): Response
+    {
+        if (! preg_match('/^[A-Za-z0-9_]+$/', $job)) {
+            abort(404);
+        }
+        $path = storage_path('app' . DIRECTORY_SEPARATOR . 'longops'
+            . DIRECTORY_SEPARATOR . $job . DIRECTORY_SEPARATOR . 'RESULT.pdf');
+        if (! is_file($path)) {
+            abort(404, 'Resultado no disponible (¿expiró o se canceló?).');
+        }
+
+        return response(file_get_contents($path), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => "inline; filename=\"area_{$job}.pdf\"",
+        ]);
+    }
+
+    /** Borra un directorio y su contenido (cleanup de tandas). */
+    private function rrmdir(string $dir): void
+    {
+        if (! is_dir($dir)) {
+            return;
+        }
+        foreach (glob($dir . DIRECTORY_SEPARATOR . '*') as $f) {
+            is_dir($f) ? $this->rrmdir($f) : @unlink($f);
+        }
+        @rmdir($dir);
     }
 
 }

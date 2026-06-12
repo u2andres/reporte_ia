@@ -364,6 +364,30 @@ Documentado en [INTEGRAR-JQUERY-UI.md](INTEGRAR-JQUERY-UI.md) (sección "longOps
 
 ---
 
+## 15. Reporte por área (longOps + merge de PDFs)
+
+**Pedido:** _"se agregó el controlador longopsBackendArea, testearlo y agregar endpoint /reporte/longops/backendArea con area y anio"_.
+
+Implementa el reporte de **todos los establecimientos de un área** combinados en un PDF, usando longOps para procesar en tandas (un área puede tener cientos de establecimientos).
+
+### Bugs corregidos del esqueleto
+- `AreaPofP::getEstablecimientosArea` estaba rota (param `$anea` vs `$area`, buscaba el área por PK, `(array)` sin `get()`). Reescrita: join `680→658→664` por `modalidad.c664_650_id = area` + año → array de IDs (F/2020 → 5).
+- En `resume`, `$h_estab`/`$anio` no existían (solo en `start`) → estado completo (lista, área, año, paso, job) en **sesión**.
+- `$this->_startTime/_maxtime` valían 0 en `resume` (instancia nueva) → se setean por request, presupuesto por tanda (cap 10 s).
+- El loop descartaba el PDF → ahora genera `rpt_min02` por establecimiento, lo guarda y al final **mergea** todo.
+
+### Piezas
+- Backend [longopsBackendArea()](app/Http/Controllers/ReporteController.php) → `GET /reporte/longops/backendArea/{area?}/{anio?}` (`?limit=N` para topear).
+- Descarga [longopsAreaResult()](app/Http/Controllers/ReporteController.php) → `GET /reporte/longops/area-result/{job}`.
+- Vista [longops_area_demo.blade.php](resources/views/reportes/longops_area_demo.blade.php) → `GET /reporte/longops-area-demo` (desplegable de áreas + año + límite). Usa `autoClose:0` + botón **Cerrar** (rehabilitado en longops.jQuery.js) para poder clickear el link de descarga.
+
+### Verificación
+- `start` (área F, 2020) → `working|0|Iniciando 5…`; `resume` → `finished|100|… <a>Descargar</a>`; descarga → **200**, `application/pdf`, **224 KB, 5 páginas** (una por establecimiento). Página demo 200 con 17 áreas.
+
+Documentado en [INTEGRAR-JQUERY-UI.md](INTEGRAR-JQUERY-UI.md) (subsección "Reporte por área").
+
+---
+
 ## Estado final del proyecto
 
 - Documentación del proyecto en español ([README.md](README.md)).
@@ -375,13 +399,14 @@ Documentado en [INTEGRAR-JQUERY-UI.md](INTEGRAR-JQUERY-UI.md) (sección "longOps
 - Comando `php artisan pdf:import-font` para gestionar fuentes de tc-lib-pdf.
 - **Frontend:** jQuery 3.7.1 + jQuery UI 1.13.3 integrados a Vite; layout `layouts.longproc` (API `LongProc`) + demo `GET /reporte/min_02-demo`; y helper `longOps` (diálogo de progreso con backend) + demo `GET /reporte/longops-demo` ([INTEGRAR-JQUERY-UI.md](INTEGRAR-JQUERY-UI.md)).
 - **Combinar PDFs:** `App\Libraries\PDFMerger` (TCPDI) + endpoint `GET /reporte/merge-test`; sirve para PDFs de TCPDF clásico (no para tc-lib-pdf) ([INTEGRAR-PDFMERGER.md](INTEGRAR-PDFMERGER.md)).
+- **Reporte por área:** `longOps` + `longopsBackendArea` → genera el `rpt_min02` de cada establecimiento del área y los combina en un PDF; demo `GET /reporte/longops-area-demo` (procesa en tandas, descarga del combinado).
 
 ## Próximos pasos pendientes
 
-1. **Reporte por área (`min_02_area`)**: combinar los `rpt_min02` de cada establecimiento con PDFMerger (son TCPDF clásico → compatibles). Quedó pendiente de implementar (un área grande tiene cientos de establecimientos → conviene tope/paginación).
+1. Para áreas muy grandes (cientos de establecimientos), el **merge final** carga todo en memoria → evaluar merge incremental / más memoria / TTL de limpieza de `storage/app/longops/`.
 2. Portar el path `callback1query` (Doctrine) de `WrapTcpLib` a Eloquent si se necesita paginación por query (hoy se usa `callback1hash`).
 3. Portar el código legacy en desuso de `ReportMin02` (`mylongprocActions`, `get_cnt1data`, `cbk_firma`) si se necesitan procesos largos o firmas.
 
 ---
 
-_Generado a partir del trabajo realizado en la sesión (2026-06-05 → 2026-06-11)._
+_Generado a partir del trabajo realizado en la sesión (2026-06-05 → 2026-06-12)._

@@ -87,8 +87,9 @@ window.longOps = {
        }
        ,buttons: {
           btCancel:{ text: longOps.lng.btnStop, id:'btnCancel', click: function() { longOps.cancel(); }}
-         // se quita el boton de "cierre"...
-         // ,btCLose :{ text: longOps.lng.btnClose, click: function() { $( this ).dialog( "close" );}}
+         // botón Cerrar: por beforeclose() sólo cierra cuando b_canClose es true
+         // (al finalizar/cancelar). Útil cuando autoClose = 0.
+         ,btClose :{ text: longOps.lng.btnClose, click: function() { $( this ).dialog( "close" );}}
        }
        ,beforeclose: function () { return (longOps.b_canClose); }
        

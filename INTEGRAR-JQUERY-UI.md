@@ -236,9 +236,37 @@ El helper es de 2013 (jQuery 1.4 / UI 1.8) y necesitó dos correcciones para fun
 2. **`<div id='progress_bar'></div>`** en vez de `<div id='progress_bar' />` — el parser HTML5 de jQuery 3.x **no cierra** los `<div/>` auto-cerrados, y el resto del contenido quedaba anidado dentro del progressbar, rompiendo la barra (no actualizaba).
 3. **autoClose también en `aborted`** — el cierre automático solo aplicaba a `finished`; al cancelar el diálogo quedaba abierto sin forma de cerrarlo (botón Cancelar deshabilitado, "X" oculta, botón Cerrar comentado). Ahora autocierra también al cancelar.
 
-> Si se usa `autoClose: 0`, conviene reponer el botón "Cerrar" (comentado en el `dialog({buttons:…})`), porque si no el diálogo no tendría forma de cerrarse al cancelar.
+Además se **rehabilitó el botón "Cerrar"** del diálogo (estaba comentado). Por `beforeclose()` solo cierra cuando `b_canClose` es true (al finalizar/cancelar), así que es seguro y resuelve el caso `autoClose: 0`.
 
 Probar: **http://localhost:8000/reporte/longops-demo** → **Iniciar operación larga** (probá también **Cancelar**).
+
+### Reporte por área (longOps + merge de PDFs)
+
+Caso real: generar el reporte de **todos los establecimientos de un área** combinados en un PDF. Como un área puede tener cientos de establecimientos, se usa longOps para procesarla en tandas.
+
+| Pieza | Detalle |
+|-------|---------|
+| Vista | [resources/views/reportes/longops_area_demo.blade.php](resources/views/reportes/longops_area_demo.blade.php) |
+| Página | `GET /reporte/longops-area-demo` (`reporte.longops.areaDemo`) — desplegable de áreas + año + límite |
+| Backend | [ReporteController::longopsBackendArea()](app/Http/Controllers/ReporteController.php) → `GET /reporte/longops/backendArea/{area?}/{anio?}` (`reporte.longops.backendArea`) |
+| Descarga | `GET /reporte/longops/area-result/{job}` (`reporte.longops.areaResult`) |
+| Modelo | [AreaPofP::getEstablecimientosArea($area, $anio)](app/Models/AreaPofP.php) — IDs de establecimientos del área (vía modalidad) con POF del año |
+
+Flujo: `start` arma la lista de establecimientos del área/año (en sesión) → cada `resume` genera el `rpt_min02` de un lote de establecimientos (dentro de un presupuesto de tiempo, guardando los PDF en `storage/app/longops/<job>/`) → al terminar, **mergea todo con PDFMerger** (los `rpt_min02` son TCPDF clásico → compatibles) y el comentario `finished` trae el **link de descarga** del PDF del área.
+
+La vista usa `autoClose: 0` (para no cerrar el diálogo y poder clickear el link) + botón **Cerrar**.
+
+```js
+longOps.start(
+    { area: 'F', anio: 2020, limit: 5 },           // limit=0 → todos
+    { backend: '{{ route('reporte.longops.backendArea') }}',
+      btnStop: 'Cancelar', btnClose: 'Cerrar', autoClose: 0 }
+);
+```
+
+> El **merge final** carga todos los PDFs de la tanda en memoria; para áreas muy grandes conviene usar el `limit` o subir memoria. Las carpetas `storage/app/longops/<job>/` quedan con el resultado (falta una limpieza por TTL).
+
+Probar: **http://localhost:8000/reporte/longops-area-demo** (área **F**, año 2020, límite 5 por defecto → rápido).
 
 ---
 

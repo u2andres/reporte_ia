@@ -30,6 +30,15 @@ Route::get('/reporte/merge-test', [ReporteController::class, 'mergeTest'])->name
 Route::get('/reporte/longops-demo', [ReporteController::class, 'longopsDemo'])->name('reporte.longops.demo');
 Route::get('/reporte/longops/backend', [ReporteController::class, 'longopsBackend'])->name('reporte.longops.backend');
 
+// Demo del reporte por área (longOps + merge)
+Route::get('/reporte/longops-area-demo', [ReporteController::class, 'longopsAreaDemo'])->name('reporte.longops.areaDemo');
+
+// Backend longOps del reporte POR ÁREA (genera rpt_min02 por establecimiento y los mergea)
+//   /reporte/longops/backendArea?area=F&anio=2020   (longOps manda los params en 'start')
+//   /reporte/longops/backendArea/F/2020             (también por ruta; ?limit=N para topear)
+Route::get('/reporte/longops/backendArea/{area?}/{anio?}', [ReporteController::class, 'longopsBackendArea'])->name('reporte.longops.backendArea');
+Route::get('/reporte/longops/area-result/{job}', [ReporteController::class, 'longopsAreaResult'])->name('reporte.longops.areaResult');
+
 // si se agrega esta FORMA, SOLO FUNCIONA :
 //   /reporte/min_02/ue/3510/anio/2019      -> estab 3510, año 2019
 // Route::get('/reporte/min_02/ue/{estab?}/anio/{anio?}', [ReporteController::class, 'rpt_min02'])->name('reporte.rpt_min02');
