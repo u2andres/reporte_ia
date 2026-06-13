@@ -282,7 +282,13 @@ Se puede forzar por query para probar: `?l_job=0`. Ejemplos verificados:
 
 Para numerar las páginas en forma continua entre establecimientos, `rpt_min02` acumula un total de páginas (`generarImpresion(&$n_totPg)`) que lee/escribe en la sesión `longop_area`. Como esa sesión **solo existe en el flujo por área**, `rpt_min02` debe **tolerar su ausencia** al llamarse directo (`GET /reporte/min_02`): usa `$n_totPg = is_array($state) ? ($state['n_totPg'] ?? 0) : 0;` y solo persiste `if (is_array($state))`. (Si no, una llamada directa daba **500** por `$state` null.)
 
-Probar: **http://localhost:8000/reporte/longops-area-demo** (área **F**, año 2020, límite 5 por defecto → rápido).
+> **Fix — el acumulado se reiniciaba entre tandas.** En el loop de `resume`, `rpt_min02` actualiza `n_totPg` en la sesión, pero el `$state` local de `resume` no se enteraba; al hacer timeout, `resume` reescribía `session('longop_area', $state)` con su `n_totPg` viejo → la numeración **reiniciaba en cada tanda**. Se sincroniza tras cada `rpt_min02`:
+> ```php
+> $state['n_totPg'] = $request->session()->get('longop_area')['n_totPg'] ?? $state['n_totPg'];
+> ```
+> Detectado con **área T (47 establecimientos → 2 tandas)**: antes `n_totPg=0` tras la 1ª tanda; después `n_totPg=55` y total **88 páginas continuas**.
+
+Probar: **http://localhost:8000/reporte/longops-area-demo** (área **T** para forzar 2 tandas; **F** con límite 5 para algo rápido).
 
 ---
 

@@ -395,6 +395,17 @@ Para la **numeración continua** entre establecimientos, `rpt_min02` pasa un tot
 
 Corregido en [rpt_min02()](app/Http/Controllers/ReporteController.php): `$n_totPg = is_array($state) ? ($state['n_totPg'] ?? 0) : 0;` y solo persiste en sesión `if (is_array($state))`. Así funciona **standalone** (n_totPg=0, sin escribir) y **dentro del área** (acumula). Smoke test post-fix: todos los endpoints 200 (`/reporte/test`, `cursos`, `min_02[/estab/anio]`, `merge-test`, demos, longOps backend y área).
 
+### Fix: `n_totPg` se reiniciaba entre tandas (numeración por área)
+Detectado al testear **área T (Técnica, 47 establecimientos → 2 tandas)**. En el loop de `resume`, `rpt_min02` acumula `n_totPg` **en la sesión**, pero la variable local `$state` de `resume` no se enteraba; al hacer timeout, `resume` reescribía `session('longop_area', $state)` con su `n_totPg` **viejo (0)** → el acumulado de la tanda se perdía y la numeración **reiniciaba** en la siguiente tanda.
+
+Síntoma medido: tras `resume#1` (31 establec.), `session n_totPg = 0` (debía ser 55).
+
+Corregido en [longopsBackendArea()](app/Http/Controllers/ReporteController.php) (loop de `resume`), tras cada `rpt_min02`:
+```php
+$state['n_totPg'] = $request->session()->get('longop_area')['n_totPg'] ?? $state['n_totPg'];
+```
+Así el writeback de cada tanda guarda el `step` correcto **y** el `n_totPg` acumulado. Verificado: tras `resume#1` `n_totPg=55`, total **88 páginas continuas** (47 establec., varios de 2 páginas).
+
 Documentado en [INTEGRAR-JQUERY-UI.md](INTEGRAR-JQUERY-UI.md) (subsección "Reporte por área").
 
 ---

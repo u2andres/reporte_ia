@@ -311,12 +311,13 @@ class ReporteController extends Controller
         // numerar las páginas en forma continua. En una llamada DIRECTA a
         // /reporte/min_02 ese estado no existe: se arranca en 0 y no se persiste.
         $state   = $request->session()->get('longop_area');
-        $n_totPg = is_array($state) ? ($state['n_totPg'] ?? 0) : 0;
-
+        $n_totPg = $in_longproc ? $state['n_totPg'] : 0;
+        
+        // ...
         $raw = $genPdf->generarImpresion($n_totPg);
 
         // guardo el nuevo total de paginas (solo si venimos del flujo por área)...
-        if (is_array($state)) {
+        if ($in_longproc) {
             $state['n_totPg'] = $n_totPg;
             $request->session()->put('longop_area', $state);
         }
@@ -558,6 +559,11 @@ class ReporteController extends Controller
             file_put_contents($dir . DIRECTORY_SEPARATOR . sprintf('%05d.pdf', $state['step'] + 1), $pdf);
 
             $state['step']++;
+
+            // rpt_min02 acumuló el total de páginas en la sesión: lo traemos al
+            // $state local para que el writeback de la tanda NO lo pise (si no,
+            // la numeración continua se reiniciaría en cada 'resume').
+            $state['n_totPg'] = $request->session()->get('longop_area')['n_totPg'] ?? $state['n_totPg'];
 
             if ($state['step'] < $total && $timedOut()) {
                 $request->session()->put('longop_area', $state);

@@ -320,6 +320,12 @@ class ReportMin02
       
       // pagina a "imprimir"...
       $pg = 'Página ' . $n_init1page + $n_act1page;
+      
+      // carga el nª de pagina "inicial" para proximo listado...
+      // - uso el closure para cargar sobre h_listado
+      $vcl_hListado = $pdf->gst_huser(null, 'vcl_hListado');
+      $xxx = $vcl_hListado('n_totPg', $n_init1page + $n_act1page);
+      
     }
     $pdf->writeHTMLCell($pg_width / 2, 0, ($pg_width / 2) + $margin1right, $y, $title . ' - ' . $pg, 0, 0, 0, true, 'R');
   }
@@ -1077,16 +1083,16 @@ EOD;
     if($in_longproc)
     { // proceso "multiple"( proceso "largo" )...
 
-      // nº total de paginas del reporte actual...
-      $n_tot1page = $pdf->getPage();
-      
+      // // nº total de paginas del reporte actual...
+      // $n_tot1page = $pdf->getPage();
+      // 
       // // nª de paginas "inicial" del reporte "anterior"...
-      $n_init1page = $pdf->gst_huser(null, 'n_totPg');
-       
-      // carga el nª de pagina "inicial" para proximo listado...
-      // - uso el closure para cargar sobre h_listado
-      $vcl_hListado = $pdf->gst_huser(null, 'vcl_hListado');
-      $xxx = $vcl_hListado('n_totPg', $n_init1page + $n_tot1page);
+      // $n_init1page = $pdf->gst_huser(null, 'n_totPg');
+      //  
+      // // carga el nª de pagina "inicial" para proximo listado...
+      // // - uso el closure para cargar sobre h_listado
+      // $vcl_hListado = $pdf->gst_huser(null, 'vcl_hListado');
+      // $xxx = $vcl_hListado('n_totPg', $n_init1page + $n_tot1page);
     }
   }
 
