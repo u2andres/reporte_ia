@@ -384,6 +384,17 @@ Implementa el reporte de **todos los establecimientos de un área** combinados e
 ### Verificación
 - `start` (área F, 2020) → `working|0|Iniciando 5…`; `resume` → `finished|100|… <a>Descargar</a>`; descarga → **200**, `application/pdf`, **224 KB, 5 páginas** (una por establecimiento). Página demo 200 con 17 áreas.
 
+### Parámetro `$l_job` (agregado después)
+`longopsBackendArea(..., $l_job = true)` controla la carpeta de la tanda. Venía con bugs (que `$job` quedaba indefinido con `l_job=false`, y la carpeta creada en `start` no coincidía con la que usaban `resume`/descarga). Corregido: el **`job` es el nombre completo de la carpeta**:
+- `l_job=true` → `<area>_<anio>_<hash>` (único, no se pisan corridas).
+- `l_job=false` → `<area>_<anio>` (fija, se reusa y se limpia al re-iniciar).
+Forzable por query (`?l_job=0`). Verificado: ambos terminan en el PDF combinado de ~224 KB (área F).
+
+### Fix: `rpt_min02` debe tolerar la ausencia de la sesión `longop_area`
+Para la **numeración continua** entre establecimientos, `rpt_min02` pasa un total de páginas acumulado a `generarImpresion(&$n_totPg)` y lo lee/escribe en la sesión `longop_area`. Esa sesión **solo existe en el flujo por área**; una llamada **directa** a `/reporte/min_02` la tenía en `null` → `$state['n_totPg']` reventaba → **500** (regresión detectada en un smoke test tras los cambios del controlador).
+
+Corregido en [rpt_min02()](app/Http/Controllers/ReporteController.php): `$n_totPg = is_array($state) ? ($state['n_totPg'] ?? 0) : 0;` y solo persiste en sesión `if (is_array($state))`. Así funciona **standalone** (n_totPg=0, sin escribir) y **dentro del área** (acumula). Smoke test post-fix: todos los endpoints 200 (`/reporte/test`, `cursos`, `min_02[/estab/anio]`, `merge-test`, demos, longOps backend y área).
+
 Documentado en [INTEGRAR-JQUERY-UI.md](INTEGRAR-JQUERY-UI.md) (subsección "Reporte por área").
 
 ---

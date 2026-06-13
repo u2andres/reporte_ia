@@ -112,7 +112,7 @@ class ReporteController extends Controller
      * app/Libraries/config/report/multig_min02_a4p.yml y los datos
      * (mockeados) en App\Libraries\Reports\ReportMin02.
      */
-    public function rpt_min02(Request $request, $estab = null, $anio = null): Response
+    public function rpt_min02(Request $request, $estab = null, $anio = null, $in_longproc = false): Response
     {
         // IMPORTANTE: no definir K_PATH_FONTS aquí. El TCPDF clásico se
         // autoconfigura a sus fuentes bundled (helvetica, etc.).
@@ -180,7 +180,6 @@ class ReporteController extends Controller
         $anio_previo    = $anio - 1;
         $tipo_curso     = 'Curso';
         $anio_header    = $anio;
-        $in_longproc    = false;
         $cod_last1estab = $estab;
 
         $rectificativa  = '';
@@ -288,7 +287,7 @@ class ReporteController extends Controller
           // para proceso "largo"...
           // - se usara para "ajustar" el numero de pagina de las que se vayan agregando...
           // - xahora en false => NO HAY MULTIPLES ESTABLECIMIENTOS...
-          'in_longproc' => false,
+          'in_longproc' => $in_longproc,
           // 
           // codigo del ultimo "establecimiento" del loop...
           'cod_last1estab' => $cod_last1estab,
@@ -306,7 +305,21 @@ class ReporteController extends Controller
           'aprobado_actual'   => $aprobado,
           );
         $genPdf = new ReportMin02($h_genPdf);
-        $raw    = $genPdf->generarImpresion();
+
+        // En el flujo POR ÁREA (longopsBackendArea) se acumula el total de
+        // páginas entre establecimientos en la sesión 'longop_area' para
+        // numerar las páginas en forma continua. En una llamada DIRECTA a
+        // /reporte/min_02 ese estado no existe: se arranca en 0 y no se persiste.
+        $state   = $request->session()->get('longop_area');
+        $n_totPg = is_array($state) ? ($state['n_totPg'] ?? 0) : 0;
+
+        $raw = $genPdf->generarImpresion($n_totPg);
+
+        // guardo el nuevo total de paginas (solo si venimos del flujo por área)...
+        if (is_array($state)) {
+            $state['n_totPg'] = $n_totPg;
+            $request->session()->put('longop_area', $state);
+        }
         
         // ... 
         return response($raw, 200, [
@@ -449,7 +462,7 @@ class ReporteController extends Controller
      * Protocolo (texto plano): "<estado>|<porcentaje>|<comentario>".
      * Params (en 'start', por ruta o query): area, anio, [limit].
      */
-    public function longopsBackendArea(Request $request, $area = null, $anio = null): Response
+    public function longopsBackendArea(Request $request, $area = null, $anio = null, $l_job = false): Response
     {
         // El rpt_min02 usa el logo (K_PATH_IMAGES).
         if (! defined('K_PATH_IMAGES')) {
@@ -464,6 +477,8 @@ class ReporteController extends Controller
         if ($action === 'start') {
             $area = (string) ($area ?? $request->query('area', 'A'));
             $anio = (int) ($anio ?? $request->query('anio', 2020));
+            // l_job también se puede forzar por query (?l_job=0) para pruebas
+            $l_job = filter_var($request->query('l_job', $l_job), FILTER_VALIDATE_BOOLEAN);
 
             if (! AreaPofP::find($area)) {
                 return response("aborted|0|No existe el área '{$area}'.", 200, $headers);
@@ -481,19 +496,33 @@ class ReporteController extends Controller
                 return response("aborted|0|Sin establecimientos para el área '{$area}' año {$anio}.", 200, $headers);
             }
 
-            $job = $area . '_' . $anio . '_' . substr(md5(uniqid('', true)), 0, 8);
+            // El "job" es el nombre COMPLETO de la carpeta de la tanda, para que
+            // 'resume' y la descarga apunten siempre al mismo lugar.
+            //   - $l_job = true  -> "F_2020_<hash>" (sufijo único: corridas sin pisarse)
+            //   - $l_job = false -> "F_2020"        (carpeta fija, se reusa)
+            $job = $area . '_' . $anio;
+            if ($l_job) {
+                $job .= '_' . substr(md5(uniqid('', true)), 0, 8);
+            }
             $dir = $baseDir . DIRECTORY_SEPARATOR . $job;
+
             if (! is_dir($dir)) {
                 mkdir($dir, 0775, true);
+            } else {
+                // start "limpio": descarta PDFs de una corrida previa (caso carpeta fija)
+                foreach (glob($dir . DIRECTORY_SEPARATOR . '*.pdf') as $f) {
+                    @unlink($f);
+                }
             }
 
             $request->session()->put('longop_area', [
-                'step'   => 0,
-                'total'  => count($estabs),
-                'estabs' => array_values($estabs),
-                'area'   => $area,
-                'anio'   => $anio,
-                'job'    => $job,
+                'step'    => 0,
+                'total'   => count($estabs),
+                'estabs'  => array_values($estabs),
+                'area'    => $area,
+                'anio'    => $anio,
+                'job'     => $job,
+                'n_totPg' => 0,
             ]);
 
             return response('working|0|Iniciando ' . count($estabs)
@@ -525,7 +554,7 @@ class ReporteController extends Controller
             $estab = $state['estabs'][$state['step']];
 
             // genera el rpt_min02 del establecimiento y lo guarda en la tanda
-            $pdf = $this->rpt_min02($request, $estab, $state['anio'])->getContent();
+            $pdf = $this->rpt_min02($request, $estab, $state['anio'], true)->getContent();
             file_put_contents($dir . DIRECTORY_SEPARATOR . sprintf('%05d.pdf', $state['step'] + 1), $pdf);
 
             $state['step']++;

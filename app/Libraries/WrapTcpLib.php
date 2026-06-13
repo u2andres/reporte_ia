@@ -171,8 +171,7 @@ class WrapTcpLib extends TCPDF
   // -------------------
 
   public function gst_huser( $h_user = null, $key = null, $key1data = null )
-  { // deprecated, usado en los listados "previos"
-    // - VER DE REEMPLAZAR por ->gst_hreport() 
+  { 
     if( !is_null($h_user) && is_array($h_user) )
     {
       $this->h_user = $h_user;
@@ -181,34 +180,6 @@ class WrapTcpLib extends TCPDF
     // ...
     if( !is_null($key) && !is_null($key1data) )
     {
-      $this->h_user[$key] = $key1data;
-    } 
-    
-    // ...
-    if( !is_null($key) )
-    {
-      return( $this->h_user[$key] );
-    } else
-    {
-      return( $this->h_user );
-    }
-  }
-
-  // ------------------------
-  // Custom "Var App" Hash...
-  // ------------------------
-
-  public function gst_hreport( $key = null, $key1data = null, $h_report = null )
-  { // usar esta en lugar de ->gst_huser()... 
-    if( !is_null($h_report) && is_array($h_report) )
-    {
-      $this->h_user = $h_report;
-    }
-
-    // ...
-    if( !is_null($key) && !is_null($key1data) )
-    {
-      !is_array($this->h_user) ? $this->h_user = array() : null;
       $this->h_user[$key] = $key1data;
     } 
     

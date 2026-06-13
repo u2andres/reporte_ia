@@ -264,7 +264,23 @@ longOps.start(
 );
 ```
 
+#### Carpeta de la tanda: parámetro `$l_job`
+
+`longopsBackendArea(Request $request, $area = null, $anio = null, $l_job = true)`. El **`job`** es el nombre **completo** de la carpeta de la tanda (`storage/app/longops/<job>/`) y es lo que comparten `start`, `resume` y la descarga:
+
+| `$l_job` | Carpeta (`job`) | Uso |
+|----------|-----------------|-----|
+| `true` (default) | `<area>_<anio>_<hash>` (sufijo único) | corridas concurrentes/repetidas sin pisarse |
+| `false` | `<area>_<anio>` (fija) | ruta de salida predecible/reusable; en `start` se limpian los PDF previos |
+
+Se puede forzar por query para probar: `?l_job=0`. Ejemplos verificados:
+`/reporte/longops/backendArea?area=F&anio=2020` → `job=F_2020_10128a05`; con `&l_job=0` → `job=F_2020`. Ambos terminan en un PDF de ~224 KB (5 establecimientos del área F).
+
 > El **merge final** carga todos los PDFs de la tanda en memoria; para áreas muy grandes conviene usar el `limit` o subir memoria. Las carpetas `storage/app/longops/<job>/` quedan con el resultado (falta una limpieza por TTL).
+
+#### Numeración continua y `rpt_min02` standalone
+
+Para numerar las páginas en forma continua entre establecimientos, `rpt_min02` acumula un total de páginas (`generarImpresion(&$n_totPg)`) que lee/escribe en la sesión `longop_area`. Como esa sesión **solo existe en el flujo por área**, `rpt_min02` debe **tolerar su ausencia** al llamarse directo (`GET /reporte/min_02`): usa `$n_totPg = is_array($state) ? ($state['n_totPg'] ?? 0) : 0;` y solo persiste `if (is_array($state))`. (Si no, una llamada directa daba **500** por `$state` null.)
 
 Probar: **http://localhost:8000/reporte/longops-area-demo** (área **F**, año 2020, límite 5 por defecto → rápido).
 

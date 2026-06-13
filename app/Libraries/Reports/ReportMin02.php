@@ -99,16 +99,33 @@ class ReportMin02
     $this->h_listado['prelim']    = $l_prelim;
   }   
   
-  public function generarImpresion()
+  public function generarImpresion(&$n_totPg = 0)
   { // Pdf creation...
     // - metodo "original" para general la impresion  
     //   - pasarlo al controlador...
+    
+    // ...
+    $vcl_hListado = function($key = null, $value = null)
+    {
+      $prevValue = !is_null($key) && array_key_exists($key, $this->h_listado) ? 
+        $this->h_listado[$key] : null;
+      if (!is_null($key) && !is_null($value))
+      {
+        $this->h_listado[$key] = $value;  
+      }
+      return $prevValue;
+    };
     
     // creacion del objeto de pdf...
     // -----------------------------
     $pdf = new WrapTcpLib($this->h_listado['pg_orientation'], 'mm', $this->h_listado['pg_size'], true, 'UTF-8', false);
     $pdf->gst_huser($this->h_listado);
-  
+    
+    // se guarda el closure...
+    // - tmb el total de paginas...
+    $pdf->gst_huser(null, 'vcl_hListado', $vcl_hListado);
+    $pdf->gst_huser(null, 'n_totPg', $n_totPg);
+
     // ...
     $dir1yaml  = dirname(__FILE__) . '/../config/report/';
     $ycfg_file = $this->h_listado['ycfg_file'] . '_' . strtolower($this->h_listado['pg_size'] . 
@@ -123,11 +140,15 @@ class ReportMin02
     if($this->h_listado['destination'] == 'F')
     {
       $pdf->Output($this->h_listado['output_file'] . '.pdf', $this->h_listado['destination']);
+      $n_totPg = array_key_exists('n_totPg', $this->h_listado) ? $this->h_listado['n_totPg'] : 0;
+      return null;
     } else
     { // si es I( "muestra el reporte" )
       // - se lo "manejo" como S
       //   - se devuelve la "string" y se lo muestra con el response desde el controlador...
-      return $pdf->Output($this->h_listado['output_file'] . '.pdf', 'S');
+      $content = $pdf->Output($this->h_listado['output_file'] . '.pdf', 'S');
+      $n_totPg = array_key_exists('n_totPg', $this->h_listado) ? $this->h_listado['n_totPg'] : 0;
+      return $content;
     }
   }
   
@@ -174,23 +195,10 @@ class ReportMin02
     $in_longproc = array_key_exists('in_longproc', $h_user) && $h_user['in_longproc'];
     if($in_longproc)
     { // proceso "multiple"( proceso "largo" )...
-
-      // - se usara este hash para manejar los nª de pagina...
-      // - tmb para los parametros "get" adicionales...
-      $tag     = $h_user['tag'];
-      $yp_prev = '/procesos/h_page/';
-      $h_page  = mylongprocActions::gst_hget1tag($tag, null, $yp_prev);
       
       // pagina actual del reporte...
       $n_act1page = $pdf->getPage();
 
-      // pagina inicial x c/reporte...
-      $n_init1page = array_key_exists('n_page', $h_page) ? $h_page['n_page'] : 1;
-      
-      // guardo la page a "imprimir"...
-      $n_page1primt = $n_init1page + $n_act1page - 1;
-      $h_page['n_page1primt'] = $n_page1primt;
-      mylongprocActions::gst_hget1tag($tag, $h_page, $yp_prev);
     }
     
     // se imprime el logo...
@@ -268,39 +276,19 @@ class ReportMin02
   }
   
   static public function mk_footer($pdf)
-  { // // completar el footer...
-    // // if( $pdf->getPage() == 1 )
-    // // { // en la 1er pagina, hace esto
-    //    $pg_size = $pdf->gst_huser( null, 'pg_size');
-    //    $nw = $pg_size == 'LEGAL' ? 196: 190;
-    //    $c_titulo = 'Firma y Sello del Director del Establecimiento&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
-    //    $margin1left = 10;
-    //    $y = $pdf->GetY() ;
-    //    $pdf->writeHTMLCell($nw, 0, $margin1left, $y, $c_titulo, 0, 0, 0, true, 'R');
-    //    
-    //    // se coloca la linea punteada...
-    //    $c_punt = '................................................................................................';
-    //    $pdf->writeHTMLCell($nw, 0, $margin1left, $y - 3, $c_punt, 0, 0, 0, true, 'R');
-    //    
-    // /*  otras posibilidades de pie de página..
-    // $c_fecha = 'Fecha';
-    // $c_firma = 'Firma y Aclaración del Responsable';
-    // $c_firma_docente = 'Firma y Aclaración del Docente';
-    // $margin1left = 10;
-    // $y = $pdf->GetY();
-    // $pdf->writeHTMLCell(050, 0, $margin1left, $y, $c_firma_docente, 0, 0, 0, true, 'C');
-    // $pdf->writeHTMLCell(190, 0, $margin1left, $y, $c_firma, 0, 0, 0, true, 'C');
-    // $pdf->writeHTMLCell(160, 0, $margin1left, $y, $c_fecha, 0, 0, 0, true, 'R');
-    //  */
-    // 
-    // // }
-    
+  { // footer...
+    /*
+    // - definicion de ->writeHTMLCell()
+         - C:\eid\Xampp_82\htdocs\desarrollo\Lrvl_curso_reporte\vendor\tecnickcom\tcpdf\tcpdf.php:eval_cmd=find, value=function writeHTMLCell(
+    */
     // ...
     $h_user = $pdf->gst_huser();
     
     // ...
-    $margin1left = 10;    
-    $pg_width    = $h_user['pg_width'];
+    $h_margin     = $pdf->getMargins();
+    $margin1left  = $h_margin['left'];;
+    $margin1right = $h_margin['right'];;
+    $pg_width     = $h_user['pg_width'];
     
     // ...
     $y = $pdf->GetY();
@@ -324,16 +312,16 @@ class ReportMin02
     } else
     { // proceso "multiple"( proceso "largo" )...
 
-      // - se usara este hash para manejar los nª de pagina...
-      // - tmb para los parametros "get" adicionales...
-      $tag     = $h_user['tag'];
-      $yp_prev = '/procesos/h_page/';
-      $h_page  = mylongprocActions::gst_hget1tag($tag, null, $yp_prev);
+      // pagina actual del reporte...
+      $n_act1page = $pdf->getPage();
 
-      // ajusto la pagina actual en "r1"...
-      $pg = 'Página ' . $h_page['n_page1primt'];
+      // pagina inicial x c/reporte...
+      $n_init1page = $h_user['n_totPg'];
+      
+      // pagina a "imprimir"...
+      $pg = 'Página ' . $n_init1page + $n_act1page;
     }
-    $pdf->writeHTMLCell($pg_width / 2, 0, $margin1left, $y, $title . ' - ' . $pg, 0, 0, 0, true, 'R');
+    $pdf->writeHTMLCell($pg_width / 2, 0, ($pg_width / 2) + $margin1right, $y, $title . ' - ' . $pg, 0, 0, 0, true, 'R');
   }
 
   // ------------------
@@ -1082,27 +1070,23 @@ EOD;
     //   - ver de guardar el total de paginas" en el "cache" 
     
     // ...
-    $h_listado  = $pdf->gst_hreport();    
+    $h_user = $pdf->gst_huser();    
 
     // ...
-    $in_longproc = array_key_exists('in_longproc', $h_listado) && $h_listado['in_longproc'];
+    $in_longproc = array_key_exists('in_longproc', $h_user) && $h_user['in_longproc'];
     if($in_longproc)
     { // proceso "multiple"( proceso "largo" )...
-      
-      // - se usara este hash para manejar los nª de pagina...
-      $tag     = $h_listado['tag'];
-      $yp_prev = '/procesos/h_page/';
-      $h_page  = mylongprocActions::gst_hget1tag($tag, null, $yp_prev);
 
-      // nº total de paginas del reporte...
+      // nº total de paginas del reporte actual...
       $n_tot1page = $pdf->getPage();
-
-      // nª de paginas "inicial" del reporte "anterior"...
-      $n_init1page = array_key_exists('n_page', $h_page) ? $h_page['n_page'] : 1;
-
-      // - carga el nª de pagina "inicial" para proximo listado...
-      $h_page['n_page'] = $n_init1page + $n_tot1page;
-      mylongprocActions::gst_hget1tag($tag, $h_page, $yp_prev);
+      
+      // // nª de paginas "inicial" del reporte "anterior"...
+      $n_init1page = $pdf->gst_huser(null, 'n_totPg');
+       
+      // carga el nª de pagina "inicial" para proximo listado...
+      // - uso el closure para cargar sobre h_listado
+      $vcl_hListado = $pdf->gst_huser(null, 'vcl_hListado');
+      $xxx = $vcl_hListado('n_totPg', $n_init1page + $n_tot1page);
     }
   }
 
