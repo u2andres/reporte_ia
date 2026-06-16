@@ -1,8 +1,16 @@
 # Lrvl_curso_reporte
 
-Aplicación web construida con **Laravel 12**. El proyecto está pensado como base para un sistema de **reportes de cursos**. Actualmente se encuentra en estado inicial (esqueleto de Laravel recién instalado), listo para empezar a desarrollar la lógica de negocio.
+Aplicación web construida con **Laravel 12** para la **generación de reportes PDF** de planta de cargos por establecimiento/área. Migra un reporteador legacy (Symfony 1 + Doctrine 1 + TCPDF) a Laravel y lee datos reales desde una base **MySQL** legacy.
 
-> **Estado actual:** proyecto base. Incluye la página de bienvenida, el modelo `User` y las migraciones estándar de Laravel. Todavía no hay controladores, rutas ni vistas propias del dominio de "cursos/reportes".
+> **Estado actual:** funcional. Integra:
+> - **Dos stacks de PDF**: tc-lib-pdf (moderno) y TCPDF clásico vía el wrapper `WrapTcpLib` (reporteador legacy por YAML).
+> - **Modelos Eloquent** mapeados desde el esquema Doctrine, leyendo de la base MySQL `sdo_db` (conexión dedicada `doctrine`); las tablas propias de Laravel quedan en SQLite.
+> - El reporte **"Planta Completa Valorizada"** (`rpt_min02`), parametrizable por establecimiento/año, con nombres reales de catálogos (Área/Modalidad/D.E.).
+> - Su versión **por área** (multi-establecimiento): genera el reporte de cada establecimiento y los **combina en un PDF** (PDFMerger), procesando en tandas con **barra de progreso** (jQuery UI / longOps) y numeración de páginas continua.
+>
+> Recorrido completo en la [bitácora de desarrollo](RESUMEN-APP.md).
+
+> 📚 **Documentación:** guías de integración — [tc-lib-pdf](INTEGRAR-TC-LIB.md) · [WrapTcpLib/TCPDF](INTEGRAR-WRAPTCPLIB.md) · [PDFMerger](INTEGRAR-PDFMERGER.md) · [jQuery UI](INTEGRAR-JQUERY-UI.md). Bitácora por commits: [RESUMEN-APP.md](RESUMEN-APP.md) · detalle extenso: [CHAT.md](CHAT.md).
 
 ---
 
@@ -121,44 +129,56 @@ npm run dev   # en otra terminal, para los assets
 ```
 Lrvl_curso_reporte/
 ├── app/
+│   ├── Console/Commands/
+│   │   └── ImportPdfFont.php        # `pdf:import-font` (fuente para tc-lib-pdf)
 │   ├── Http/Controllers/
-│   │   └── Controller.php          # Controlador base abstracto
+│   │   └── ReporteController.php    # Todos los endpoints de reportes
+│   ├── Libraries/
+│   │   ├── WrapTcpLib.php           # Reporteador legacy (extiende TCPDF clásico)
+│   │   ├── PDFMerger.php            # Combinar PDFs (TCPDI)
+│   │   ├── tcpdf/                   # TCPDI bundleado (tcpdi.php, fpdf_tpl.php, include/…)
+│   │   ├── config/report/*.yml      # Config YAML de los reportes (cursos, multig_min02_a4p)
+│   │   └── Reports/
+│   │       ├── ReportMin02.php      # Orquestador del reporte "Planta Completa Valorizada"
+│   │       └── CursoReportData.php  # Datos de ejemplo del reporte "cursos"
 │   ├── Models/
-│   │   └── User.php                # Modelo de usuario (Authenticatable)
-│   └── Providers/
-│       └── AppServiceProvider.php  # Service provider (vacío por ahora)
-├── bootstrap/
-│   └── app.php                     # Configuración de la app (rutas, middleware, health check /up)
-├── config/                         # Configuración (database, auth, etc.)
+│   │   ├── User.php
+│   │   └── *PofP.php                # PofP + Cargo/Turno/Establecimiento/Historia + Area/Modalidad/Distrito (conexión `doctrine`)
+│   └── Providers/AppServiceProvider.php
+├── config/database.php              # incluye la conexión `doctrine` (MySQL legacy)
 ├── database/
-│   ├── factories/
-│   │   └── UserFactory.php         # Factory de usuarios (datos falsos)
-│   ├── migrations/                 # Migraciones (users, cache, jobs)
-│   ├── seeders/
-│   │   └── DatabaseSeeder.php      # Seeder: crea un usuario de prueba
-│   └── database.sqlite             # Base SQLite (se crea en la instalación)
+│   ├── migrations/                  # Laravel + tablas legacy (esquema-como-código)
+│   ├── seeders/                     # DatabaseSeeder + PofReportSeeder (fixture SQLite)
+│   └── database.sqlite              # Tablas propias de Laravel
 ├── resources/
-│   ├── css/app.css                 # Entrada Tailwind CSS v4
-│   ├── js/app.js                   # Entrada JS (Axios)
+│   ├── css/app.css                  # Tailwind 4 + jQuery UI
+│   ├── js/app.js                    # Axios + jQuery + jQuery UI + longOps
+│   ├── js/longops/longops.jQuery.js # Diálogo de progreso (longOps)
+│   ├── reports/images/logo_ciudad.png
 │   └── views/
-│       └── welcome.blade.php       # Página de bienvenida
-├── routes/
-│   ├── web.php                     # Rutas web (solo "/")
-│   └── console.php                 # Comandos de consola (inspire)
-├── tests/                          # Tests (PHPUnit)
-├── composer.json
-├── package.json
-└── vite.config.js
+│       ├── welcome.blade.php
+│       ├── layouts/longproc.blade.php
+│       └── reportes/                # min02_demo, longops_demo, longops_area_demo
+├── routes/web.php                   # rutas de reportes (ver más abajo)
+├── INTEGRAR-*.md · CHAT.md · RESUMEN-APP.md   # documentación
+├── composer.json · package.json · vite.config.js
 ```
 
 ### Rutas actuales
 
-| Método | URI   | Acción                          | Nombre |
-|--------|-------|---------------------------------|--------|
-| GET    | `/`   | Closure → vista `welcome`       | —      |
-| GET    | `/up` | Health check (Laravel)          | —      |
+| Método | URI | Qué hace |
+|--------|-----|----------|
+| GET | `/` | Página de bienvenida |
+| GET | `/reporte/test` | PDF de prueba (tc-lib-pdf) |
+| GET | `/reporte/cursos` | Reporte simple (WrapTcpLib) |
+| GET | `/reporte/min_02/{estab?}/{anio?}` | "Planta Completa Valorizada" (datos reales) |
+| GET | `/reporte/min_02-demo` | Demo barra de progreso (LongProc) |
+| GET | `/reporte/merge-test` | Prueba de PDFMerger |
+| GET | `/reporte/longops-demo` | Demo del diálogo longOps |
+| GET | `/reporte/longops-area-demo` | Reporte **por área** (longOps + merge) |
+| GET | `/reporte/longops/backend[Area]`, `…/area-result/{job}` | Backends/descarga del flujo longOps |
 
-> Aún no existe `routes/api.php` ni controladores de dominio.
+> `php artisan route:list` muestra el detalle. No hay `routes/api.php`.
 
 ---
 
@@ -174,20 +194,19 @@ Por defecto el proyecto usa **SQLite** (`database/database.sqlite`), ideal para 
 - **cache** / **cache_locks** — almacenamiento de caché
 - **jobs** / **job_batches** / **failed_jobs** — sistema de colas
 
-### Cambiar a MySQL/MariaDB (XAMPP)
+### Conexión MySQL legacy (`doctrine`) para los datos de los reportes
 
-Si querés usar MySQL de XAMPP en lugar de SQLite, editá el `.env`:
+Las tablas propias de Laravel (users, sessions, cache, jobs) viven en **SQLite**. Los **datos de los reportes** (planta de cargos POF) se leen de una base **MySQL legacy** (`sdo_db`) a través de una **conexión dedicada `doctrine`** (`config/database.php`), que usan los modelos `App\Models\*PofP`. Configurarla en el `.env`:
 
 ```env
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=curso_reporte
-DB_USERNAME=root
-DB_PASSWORD=
+DB_DOCTRINE_HOST=127.0.0.1
+DB_DOCTRINE_PORT=3306
+DB_DOCTRINE_DATABASE=sdo_db
+DB_DOCTRINE_USERNAME=...
+DB_DOCTRINE_PASSWORD=...
 ```
 
-Luego creá la base en phpMyAdmin y corré `php artisan migrate`.
+> Solo lectura: esas tablas ya existen con datos, no se migran ni seedean desde aquí. (La MariaDB legacy es vieja: no usar comandos de *schema* —`migrate`, `db:show`— contra `doctrine`.) Detalle en [INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md).
 
 ### Datos de prueba (seeders)
 
@@ -225,11 +244,15 @@ php artisan breeze:install
 - **Tailwind CSS v4** integrado vía `@tailwindcss/vite` (configurado en `vite.config.js`).
 - Entradas de assets: `resources/css/app.css` y `resources/js/app.js`.
 - **Axios** preconfigurado en `resources/js/bootstrap.js` con el header `X-Requested-With`.
+- **jQuery 3.7 + jQuery UI 1.13** (`jquery-ui-dist`) integrados al build (importados en `app.js` → `window.$/jQuery`; CSS de jQuery UI en `app.css`). Se usan para las barras/diálogos de progreso de los reportes. Ver [INTEGRAR-JQUERY-UI.md](INTEGRAR-JQUERY-UI.md).
+- Helper **`longOps`** (`resources/js/longops/longops.jQuery.js`) — diálogo modal con barra de progreso para procesos largos (p. ej. el reporte por área).
 - Build de producción en `public/build/`.
+
+> ⚠️ `app.js` se carga como **módulo diferido**: el JS inline de las vistas debe ir dentro de `document.addEventListener('DOMContentLoaded', …)` usando `window.jQuery` (no `$(function(){})` directo, porque en el parseo `window.$` todavía no existe).
 
 ```bash
 npm run dev      # desarrollo con hot reload
-npm run build    # build de producción
+npm run build    # build de producción (necesario tras tocar JS/CSS)
 ```
 
 ---
@@ -286,13 +309,10 @@ El script `test` limpia la configuración cacheada antes de ejecutar los tests c
 
 ## Próximos pasos sugeridos
 
-Como base para un sistema de **reportes de cursos**, los siguientes pasos típicos serían:
-
-1. Definir los modelos del dominio (p. ej. `Curso`, `Alumno`, `Inscripcion`, `Reporte`) con sus migraciones.
-2. Crear los controladores y rutas CRUD correspondientes.
-3. Construir las vistas Blade con un layout común.
-4. Instalar un starter kit de autenticación si se requiere login.
-5. Conectar la generación de PDF (ya integrada con tc-lib-pdf, ver [INTEGRAR-TC-LIB.md](INTEGRAR-TC-LIB.md)) a datos reales de la base.
+1. **Áreas grandes** (cientos de establecimientos): el merge final del reporte por área carga todos los PDFs en memoria → evaluar merge incremental / subir memoria / limpieza por TTL de `storage/app/longops/`.
+2. Portar el path de datos por `callback1query` (Doctrine) de `WrapTcpLib` a Eloquent (hoy se usa `callback1hash`).
+3. Portar el código legacy en desuso de `ReportMin02` (`mylongprocActions`, `get_cnt1data`, `cbk_firma`) si se necesitan procesos largos avanzados o firmas.
+4. (Opcional) Autenticación / autorización si los reportes deben quedar detrás de login.
 
 ---
 
