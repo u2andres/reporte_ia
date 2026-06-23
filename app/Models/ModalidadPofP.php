@@ -12,7 +12,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class ModalidadPofP extends Model
 {
-    protected $connection = 'doctrine';
+    // xdf se usa la conexion "sqlite"
+    // - que se migro con los datos de esta tabla...
+    // protected $connection = 'doctrine';
     protected $table = '664_MODALIDAD_POF_P';
     protected $primaryKey = 'c664_id';
     public $timestamps = false;

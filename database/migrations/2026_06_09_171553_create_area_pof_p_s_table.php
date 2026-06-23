@@ -13,7 +13,7 @@ return new class extends Migration
             $table->char('c650_id', 1)->primary();           // id (char 1, ej. 'D')
             $table->string('c650_descripcion', 50)->nullable(); // descripcion
             $table->integer('c650_orden')->nullable();        // orden
-            $table->string('c650_002_id', 2);                 // area_id (nomenclador, notnull)
+            $table->string('c650_002_id', 2)->nullable();     // area_id (nomenclador; el origen admite NULL, ej. 'Gestión Privada')
         });
     }
 

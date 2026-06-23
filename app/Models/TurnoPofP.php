@@ -11,7 +11,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class TurnoPofP extends Model
 {
-    protected $connection = 'doctrine';
+    // xdf se usa la conexion "sqlite"
+    // - que se migro con los datos de esta tabla...
+    // protected $connection = 'doctrine';
     protected $table = '686_TURNO_POF_P';
     protected $primaryKey = 'c686_id';
     public $incrementing = false;     // PK no autoincremental

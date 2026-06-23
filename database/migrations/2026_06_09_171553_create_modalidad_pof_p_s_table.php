@@ -18,7 +18,7 @@ return new class extends Migration
             $table->integer('c664_689_id')->nullable();          // tipo_curso_id
             $table->integer('c664_anio_alta')->nullable();       // anio_alta
             $table->integer('c664_anio_baja')->nullable();       // anio_baja
-            $table->string('c664_012_id', 2);                    // modalidad_id (nomenclador, notnull)
+            $table->string('c664_012_id', 2)->nullable();        // modalidad_id (nomenclador; el origen admite NULL)
         });
     }
 

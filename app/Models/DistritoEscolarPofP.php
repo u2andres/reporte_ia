@@ -11,7 +11,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class DistritoEscolarPofP extends Model
 {
-    protected $connection = 'doctrine';
+    // xdf se usa la conexion "sqlite"
+    // - que se migro con los datos de esta tabla...
+    // protected $connection = 'doctrine';
     protected $table = '657_DISTRITO_ESCOLAR_POF_P';
     protected $primaryKey = 'c657_id';
     public $timestamps = false;

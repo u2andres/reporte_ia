@@ -104,8 +104,10 @@ class PofP extends Model
 //       foreignAlias: PofPs  
 // 
 
+  // xdf se usa la conexion "sqlite"
+  // - que se migro con los datos de esta tabla...
   // 0. Conexión legacy (MySQL con datos reales) — ver config/database.php 'doctrine'
-  protected $connection = 'doctrine';
+  // protected $connection = 'doctrine';
 
   // 1. Definir la tabla física real
   protected $table = '680_POF_P';

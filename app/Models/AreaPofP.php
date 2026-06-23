@@ -12,7 +12,9 @@ use Illuminate\Support\Facades\DB;
  */
 class AreaPofP extends Model
 {
-    protected $connection = 'doctrine';
+    // xdf se usa la conexion "sqlite"
+    // - que se migro con los datos de esta tabla...
+    // protected $connection = 'doctrine';
     protected $table = '650_AREA_POF_P';
     protected $primaryKey = 'c650_id';
     public $incrementing = false;     // PK char(1), no autoincremental
