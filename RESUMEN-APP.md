@@ -58,6 +58,18 @@ El reporte dejó de estar fijo: parámetros **`estab`/`anio`** por ruta o query 
 ### 7. Reporte por área + paginación continua (06-12 → 06-13)
 El caso real: combinar el `rpt_min02` de **todos los establecimientos de un área** en un PDF, procesando en tandas (longOps) por la cantidad de establecimientos. Vista/backend `/reporte/longops-area-demo` + `longopsBackendArea` (`4e95391`). Se agregó la **numeración de páginas continua** entre establecimientos (`6d2edf5`) y se **corrigió** un bug por el que el contador se reiniciaba en cada tanda (`f38f720`, detectado con área **T** = 47 establecimientos → 2 tandas → 88 páginas continuas).
 
+### 8. Tablas locales SQLite + link en la página de inicio (06-23)
+Se sumaron **migraciones de relleno (`fill_*`)** que copian datos desde la conexión `doctrine` (origen legacy) a tablas propias en **SQLite**: `680_POF_P`, `652_CARGO_POF_P`, `650_AREA_POF_P`, `664_MODALIDAD_POF_P`. También se reemplazó el botón "Deploy now" de la página de inicio (`welcome.blade.php`) por un link **"Armado de los Reportes por Área"** que apunta a `route('reporte.longops.areaDemo')` → `/reporte/longops-area-demo`.
+
+**Patrón de las migraciones `fill_*`** (copia `doctrine` → `sqlite`):
+- El origen trae `NULL` en columnas declaradas NOT NULL → `SQLSTATE[23000]: NOT NULL constraint failed`. Según el caso:
+  - **Booleano con `->default(...)`** (`c652_incrementa`, `c652_reduce`): coalescer en el insert con `?? true`.
+  - **Código / nomenclador sin default lógico** (`c650_002_id`, `c664_012_id`): hacer la columna `->nullable()` en la migración de creación (inventar un valor falsearía el dato).
+- Otros arreglos: imports `use Illuminate\Support\Facades\DB;` y `use ...\Collection;`; `DB::connection('sqlite')->table(...)` (no `::table`); `truncate()` al inicio del `up()` para idempotencia (evita `UNIQUE constraint failed` por corridas parciales).
+- Tras cambiar el esquema de una creación ya aplicada: `php artisan migrate:fresh --force` (el `fill_pof_p` tarda ~4 min).
+
+> **Entorno**: el `php` del PATH es 5.6.35; usar el de XAMPP `c:/eid/Xampp_82/php/php.exe` (PHP 8.2) para artisan/composer.
+
 ---
 
 ## Estado actual (endpoints)
