@@ -1,10 +1,10 @@
 # Lrvl_curso_reporte
 
-Aplicación web construida con **Laravel 12** para la **generación de reportes PDF** de planta de cargos por establecimiento/área. Migra un reporteador legacy (Symfony 1 + Doctrine 1 + TCPDF) a Laravel y lee datos reales desde una base **MySQL** legacy.
+Aplicación web construida con **Laravel 12** para la **generación de reportes PDF** de planta de cargos por establecimiento/área. Migra un reporteador legacy (Symfony 1 + Doctrine 1 + TCPDF) a Laravel; los datos reales (originados en una base **MySQL** legacy) se copiaron a **SQLite** y se sirven desde ahí.
 
 > **Estado actual:** funcional. Integra:
 > - **Dos stacks de PDF**: tc-lib-pdf (moderno) y TCPDF clásico vía el wrapper `WrapTcpLib` (reporteador legacy por YAML).
-> - **Modelos Eloquent** mapeados desde el esquema Doctrine, leyendo de la base MySQL `sdo_db` (conexión dedicada `doctrine`); las tablas propias de Laravel quedan en SQLite.
+> - **Modelos Eloquent** mapeados desde el esquema Doctrine. Los datos de los reportes (planta de cargos POF) se copiaron desde la base MySQL legacy `sdo_db` (conexión `doctrine`) a **SQLite** mediante migraciones `fill_*`; **los modelos y los reportes leen de SQLite**. La MySQL legacy solo se necesita para regenerar esos datos.
 > - El reporte **"Planta Completa Valorizada"** (`rpt_min02`), parametrizable por establecimiento/año, con nombres reales de catálogos (Área/Modalidad/D.E.).
 > - Su versión **por área** (multi-establecimiento): genera el reporte de cada establecimiento y los **combina en un PDF** (PDFMerger), procesando en tandas con **barra de progreso** (jQuery UI / longOps) y numeración de páginas continua.
 >
@@ -73,7 +73,7 @@ Este comando ejecuta, en orden:
 1. `composer install` — instala dependencias PHP
 2. Copia `.env.example` a `.env` (si no existe)
 3. `php artisan key:generate` — genera la clave de aplicación
-4. `php artisan migrate --force` — corre las migraciones
+4. `php database/setup_sqlite.php` — arma `database/database.sqlite` **importando el dump** `database/database.sqlite.sql` (ya **no** corre migraciones)
 5. `npm install` — instala dependencias JS
 6. `npm run build` — compila los assets
 
@@ -86,13 +86,17 @@ composer install
 copy .env.example .env          # En PowerShell: Copy-Item .env.example .env
 php artisan key:generate
 
-# Crear la base SQLite vacía (Windows / PowerShell)
-New-Item -ItemType File database\database.sqlite
+# Armar la base SQLite importando el dump versionado (database/database.sqlite.sql)
+php database/setup_sqlite.php
 
-php artisan migrate
 npm install
 npm run build
 ```
+
+> El proyecto **ya no se instala corriendo migraciones**: la base SQLite se distribuye como
+> dump (`database/database.sqlite.sql`, versionado) y `database/setup_sqlite.php` la reconstruye.
+> Las migraciones `fill_*` siguen disponibles para **regenerar** los datos desde la MySQL legacy
+> (ver [Base de datos](#base-de-datos)); tras usarlas hay que re-exportar el dump.
 
 ---
 
@@ -143,13 +147,15 @@ Lrvl_curso_reporte/
 │   │       └── CursoReportData.php  # Datos de ejemplo del reporte "cursos"
 │   ├── Models/
 │   │   ├── User.php
-│   │   └── *PofP.php                # PofP + Cargo/Turno/Establecimiento/Historia + Area/Modalidad/Distrito (conexión `doctrine`)
+│   │   └── *PofP.php                # PofP + Cargo/Turno/Establecimiento/Historia + Area/Modalidad/Distrito (leen de `sqlite`)
 │   └── Providers/AppServiceProvider.php
 ├── config/database.php              # incluye la conexión `doctrine` (MySQL legacy)
 ├── database/
-│   ├── migrations/                  # Laravel + tablas legacy (esquema-como-código)
+│   ├── migrations/                  # Laravel + tablas POF (create_* y fill_* desde 'doctrine')
 │   ├── seeders/                     # DatabaseSeeder + PofReportSeeder (fixture SQLite)
-│   └── database.sqlite              # Tablas propias de Laravel
+│   ├── setup_sqlite.php             # importa el dump .sql -> database.sqlite (lo usa composer setup)
+│   ├── database.sqlite.sql          # dump versionado de la base (artefacto que se distribuye)
+│   └── database.sqlite              # base SQLite (generada; gitignored)
 ├── resources/
 │   ├── css/app.css                  # Tailwind 4 + jQuery UI
 │   ├── js/app.js                    # Axios + jQuery + jQuery UI + longOps
@@ -184,19 +190,19 @@ Lrvl_curso_reporte/
 
 ## Base de datos
 
-Por defecto el proyecto usa **SQLite** (`database/database.sqlite`), ideal para desarrollo y aprendizaje.
+Por defecto el proyecto usa **SQLite** (`database/database.sqlite`), ideal para desarrollo y aprendizaje. **Todo** vive en SQLite: las tablas propias de Laravel y las tablas de datos de los reportes.
 
-### Tablas creadas por las migraciones
+### Tablas en SQLite
 
-- **users** — `id`, `name`, `email` (único), `email_verified_at`, `password`, `remember_token`, timestamps
-- **password_reset_tokens** — `email`, `token`, `created_at`
-- **sessions** — `id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`
-- **cache** / **cache_locks** — almacenamiento de caché
-- **jobs** / **job_batches** / **failed_jobs** — sistema de colas
+- **Propias de Laravel**: `users`, `password_reset_tokens`, `sessions`, `cache` / `cache_locks`, `jobs` / `job_batches` / `failed_jobs`.
+- **Datos de los reportes (POF)**: `680_POF_P`, `652_CARGO_POF_P`, `686_TURNO_POF_P`, `658_ESTABLECIMIENTO_POF_P`, `661_HISTORIA_POF_P`, `650_AREA_POF_P`, `664_MODALIDAD_POF_P`, `657_DISTRITO_ESCOLAR_POF_P`. Las leen los modelos `App\Models\*PofP` (conexión por defecto `sqlite`).
 
-### Conexión MySQL legacy (`doctrine`) para los datos de los reportes
+### Cómo se arma la base
 
-Las tablas propias de Laravel (users, sessions, cache, jobs) viven en **SQLite**. Los **datos de los reportes** (planta de cargos POF) se leen de una base **MySQL legacy** (`sdo_db`) a través de una **conexión dedicada `doctrine`** (`config/database.php`), que usan los modelos `App\Models\*PofP`. Configurarla en el `.env`:
+Hay **dos** maneras de tener `database/database.sqlite` poblada:
+
+1. **Importando el dump (recomendado / `composer setup`)** — `php database/setup_sqlite.php` reconstruye la base desde `database/database.sqlite.sql` (dump versionado). El `.sqlite` está gitignored (se genera); el `.sql` se versiona.
+2. **Regenerando desde la MySQL legacy** — las migraciones `create_*` crean las tablas y las `fill_*` copian los datos desde la conexión **`doctrine`** (`config/database.php`). Requiere la MySQL accesible y configurada en el `.env`:
 
 ```env
 DB_DOCTRINE_HOST=127.0.0.1
@@ -206,7 +212,9 @@ DB_DOCTRINE_USERNAME=...
 DB_DOCTRINE_PASSWORD=...
 ```
 
-> Solo lectura: esas tablas ya existen con datos, no se migran ni seedean desde aquí. (La MariaDB legacy es vieja: no usar comandos de *schema* —`migrate`, `db:show`— contra `doctrine`.) Detalle en [INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md).
+Para regenerar: `php artisan migrate:fresh --force` (recrea todo; el `fill_pof_p` tarda unos minutos). **Tras regenerar, re-exportá el dump** (`database/database.sqlite.sql`) para mantenerlo al día.
+
+> La conexión `doctrine` es **solo el origen** de los datos y la usan **únicamente las migraciones `fill_*`**: ningún modelo ni código de la app la consulta, por lo que los reportes corren sin la MySQL legacy accesible. Es de **solo lectura** — no correr comandos de *schema* (`migrate`, `db:show`) contra `doctrine` (la MariaDB legacy es vieja). Detalle en [INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md).
 
 ### Datos de prueba (seeders)
 
@@ -265,7 +273,7 @@ El proyecto integra **dos** librerías de generación de PDF, cada una con su gu
 |----------|----------|----------|------|
 | **tc-lib-pdf** 8 | API moderna OO (HTML, tablas) | `/reporte/test` | 📄 [INTEGRAR-TC-LIB.md](INTEGRAR-TC-LIB.md) |
 | **TCPDF** 6 + `WrapTcpLib` | Reporteador legacy por YAML (grillas, grupos, cabecera/pie, marca de agua) | `/reporte/cursos` | 📄 [INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md) |
-| **TCPDF** 6 + `ReportMin02` | Reporte real "Planta Completa Valorizada" (datos desde MySQL, parametrizado) | `/reporte/min_02/{estab?}/{anio?}` | 📄 [INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md) |
+| **TCPDF** 6 + `ReportMin02` | Reporte real "Planta Completa Valorizada" (datos reales en SQLite, parametrizado) | `/reporte/min_02/{estab?}/{anio?}` | 📄 [INTEGRAR-WRAPTCPLIB.md](INTEGRAR-WRAPTCPLIB.md) |
 
 > Ambas comparten la constante global `K_PATH_FONTS` con formatos de fuente distintos; por eso **no** se define globalmente sino dentro de cada controlador. Ver detalle en las guías.
 
@@ -285,8 +293,8 @@ php artisan serve             # Levanta el servidor
 ## Comandos útiles
 
 ```bash
-php artisan migrate              # Correr migraciones
-php artisan migrate:fresh --seed # Recrear DB y poblar con seeders
+php database/setup_sqlite.php    # Armar database.sqlite desde el dump .sql (lo usa composer setup)
+php artisan migrate:fresh --force # Regenerar la DB por migraciones (create_* + fill_* desde 'doctrine')
 php artisan tinker               # REPL interactivo
 php artisan route:list           # Listar todas las rutas
 php artisan pail                 # Ver logs en tiempo real

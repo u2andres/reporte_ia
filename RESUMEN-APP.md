@@ -65,6 +65,8 @@ Se sumaron **migraciones de relleno (`fill_*`)** que copian datos desde la conex
 
 **Modelos sin conexión `doctrine`**: el único método de aplicación que aún consultaba la MySQL legacy era `AreaPofP::getEstablecimientosArea()`; se le quitó el `->connection('doctrine')` para que use la conexión por defecto `sqlite` (las tablas `680`/`658`/`664` ya están migradas). Resultado: ningún modelo ni código de la app usa `doctrine` (solo las migraciones `fill_*`), por lo que los reportes pueden correr sin la MySQL legacy accesible.
 
+> **Paso operativo tras editar código PHP (gotcha)**: el servidor de desarrollo (`composer dev` / `php artisan serve`) carga el código en memoria; un proceso levantado **antes** de un cambio sigue ejecutando la versión vieja. Síntoma observado: tras pasar `AreaPofP` a `sqlite`, el reporte seguía dando `SQLSTATE[3D000] ... No database selected (Connection: doctrine)` porque el server tenía cacheado el código anterior (el que usaba `->connection('doctrine')`). **Solución**: reiniciar el server (Ctrl+C y volver a lanzar `composer dev`). Para descartar config cacheada: `php artisan config:clear`. Una ejecución nueva por CLI/Tinker siempre toma el código actual (sirve para validar el fix sin depender del server).
+
 **Patrón de las migraciones `fill_*`** (copia `doctrine` → `sqlite`):
 - El origen trae `NULL` en columnas declaradas NOT NULL → `SQLSTATE[23000]: NOT NULL constraint failed`. Según el caso:
   - **Booleano con `->default(...)`** (`c652_incrementa`, `c652_reduce`): coalescer en el insert con `?? true`.
