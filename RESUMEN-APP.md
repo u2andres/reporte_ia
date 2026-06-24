@@ -76,6 +76,9 @@ Se sumaron **migraciones de relleno (`fill_*`)** que copian datos desde la conex
 
 > **Entorno**: el `php` del PATH es 5.6.35; usar el de XAMPP `c:/eid/Xampp_82/php/php.exe` (PHP 8.2) para artisan/composer.
 
+### 9. Limpieza del helper longOps: sin `eval` (06-24)
+En `resources/js/longops/longops.jQuery.js`, `finalAction()` ejecutaba los callbacks pasados como string con `eval(faction)` (API legacy del helper de 2013) y usaba `$.isFunction` (deprecado en jQuery 3.3+). Como `onSuccess`/`onCancel`/`onError` siempre se pasan como **funciones**, se simplificó a `if (typeof faction === 'function') faction();`: se elimina el `eval` (riesgo de seguridad / regla `no-eval`) y la rama de string, que era código muerto. Se recompiló (`npm run build`). Detalle en [INTEGRAR-JQUERY-UI.md](INTEGRAR-JQUERY-UI.md) (arreglo #4).
+
 ---
 
 ## Estado actual (endpoints)
@@ -84,7 +87,7 @@ Se sumaron **migraciones de relleno (`fill_*`)** que copian datos desde la conex
 |----------|----------|
 | `GET /reporte/test` | PDF de prueba con **tc-lib-pdf** |
 | `GET /reporte/cursos` | Reporte simple con **WrapTcpLib** (datos de ejemplo) |
-| `GET /reporte/min_02/{estab?}/{anio?}` | **"Planta Completa Valorizada"** (datos reales MySQL, nombres de catálogo) |
+| `GET /reporte/min_02/{estab?}/{anio?}` | **"Planta Completa Valorizada"** (datos reales en SQLite, nombres de catálogo) |
 | `GET /reporte/min_02-demo` | Demo barra de progreso (`LongProc`) generando varios `rpt_min02` |
 | `GET /reporte/merge-test` | Prueba de **PDFMerger** (TCPDI) |
 | `GET /reporte/longops-demo` | Demo del diálogo **longOps** |

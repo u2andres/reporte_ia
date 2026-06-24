@@ -228,13 +228,14 @@ if ($action === 'abort') { return "aborted|{$pct}|Cancelada."; }
 // resume: step++ ; return $step>=$total ? "finished|100|…" : "working|{$pct}|Paso {$step}…";
 ```
 
-### Dos arreglos necesarios (jQuery moderno)
+### Arreglos necesarios (jQuery moderno)
 
-El helper es de 2013 (jQuery 1.4 / UI 1.8) y necesitó dos correcciones para funcionar hoy:
+El helper es de 2013 (jQuery 1.4 / UI 1.8) y necesitó varias correcciones para funcionar hoy:
 
 1. **`window.longOps`** en vez de `longOps =` — los módulos ESM son *strict mode* y no permiten asignar a una variable global no declarada.
 2. **`<div id='progress_bar'></div>`** en vez de `<div id='progress_bar' />` — el parser HTML5 de jQuery 3.x **no cierra** los `<div/>` auto-cerrados, y el resto del contenido quedaba anidado dentro del progressbar, rompiendo la barra (no actualizaba).
 3. **autoClose también en `aborted`** — el cierre automático solo aplicaba a `finished`; al cancelar el diálogo quedaba abierto sin forma de cerrarlo (botón Cancelar deshabilitado, "X" oculta, botón Cerrar comentado). Ahora autocierra también al cancelar.
+4. **`finalAction` sin `eval`** — la versión original ejecutaba los callbacks string con `eval(faction)` (y usaba `$.isFunction`, deprecado en jQuery 3.3+). Como `onSuccess`/`onCancel`/`onError` siempre se pasan como **funciones**, se simplificó a `if (typeof faction === 'function') faction();` — se elimina el `eval` (riesgo de seguridad / `no-eval`) y la rama de string, que era código muerto.
 
 Además se **rehabilitó el botón "Cerrar"** del diálogo (estaba comentado). Por `beforeclose()` solo cierra cuando `b_canClose` es true (al finalizar/cancelar), así que es seguro y resuelve el caso `autoClose: 0`.
 

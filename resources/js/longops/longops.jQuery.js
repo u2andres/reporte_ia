@@ -150,9 +150,6 @@ window.longOps = {
      if(actype==='finished') faction = this.onSuccess;
      else if(actype==='aborted') faction = this.onCancel;
      else faction = this.onError;
-     if(faction) {
-         if($.isFunction(faction)) faction();
-         else if(typeof(faction)==='string') eval(faction);
-     }
+     if(typeof faction === 'function') faction();
    }
 }
