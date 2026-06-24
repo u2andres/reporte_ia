@@ -47,10 +47,13 @@ composer test                                       # phpunit
 - **Combinar PDFs**: TCPDI / `PDFMerger` (reporte por área).
 - **Dos bases de datos**:
   - **SQLite** (`database/database.sqlite`, conexión por defecto `sqlite`): tablas propias
-    de Laravel (users, sessions, cache, jobs) + copias locales de catálogos vía migraciones `fill_*`.
-  - **MySQL legacy** (conexión dedicada **`doctrine`**, base `sdo_db`): datos reales de los
-    reportes, leídos por los modelos `App\Models\*PofP`. **Solo lectura** — NO correr comandos
-    de schema (`migrate`, `db:show`) contra `doctrine` (la MariaDB es vieja).
+    de Laravel (users, sessions, cache, jobs) + las tablas de datos de los reportes
+    (`680_POF_P`, `658_…`, `664_…`, etc.), pobladas desde `doctrine` vía las migraciones `fill_*`.
+    Los modelos `App\Models\*PofP` leen de aquí (su `protected $connection = 'doctrine'` está comentado).
+  - **MySQL legacy** (conexión dedicada **`doctrine`**, base `sdo_db`): **origen** de los datos,
+    usado **solo por las migraciones `fill_*`** para copiar a `sqlite`. Ya **ningún** modelo ni
+    código de app la consulta, así que los reportes corren sin la MySQL accesible. **Solo lectura** —
+    NO correr comandos de schema (`migrate`, `db:show`) contra `doctrine` (la MariaDB es vieja).
 - Controlador único de reportes: `App\Http\Controllers\ReporteController`. Orquestador del
   reporte real: `App\Libraries\Reports\ReportMin02`.
 - **Frontend**: jQuery 3.7 + jQuery UI 1.13 (barras/diálogos de progreso, helper `longOps`).

@@ -63,6 +63,8 @@ Se sumaron **migraciones de relleno (`fill_*`)** que copian datos desde la conex
 
 **`composer setup` ya no migra, importa el dump**: con la base SQLite ya armada (datos copiados desde `doctrine` vía las `fill_*`), se exportó a `database/database.sqlite.sql` y el `setup` la reconstruye desde ese dump en vez de correr migraciones. Se quitó `@php artisan migrate --force` del script `setup` (`composer.json`) y se agregó `@php database/setup_sqlite.php` (importa el `.sql` a `database.sqlite` vía PDO; idempotente, limpia las tablas antes de importar). El `.sqlite` queda gitignored (se genera); el `.sql` se versiona. Las `fill_*` siguen disponibles para regenerar la base; tras usarlas hay que **re-exportar** el dump.
 
+**Modelos sin conexión `doctrine`**: el único método de aplicación que aún consultaba la MySQL legacy era `AreaPofP::getEstablecimientosArea()`; se le quitó el `->connection('doctrine')` para que use la conexión por defecto `sqlite` (las tablas `680`/`658`/`664` ya están migradas). Resultado: ningún modelo ni código de la app usa `doctrine` (solo las migraciones `fill_*`), por lo que los reportes pueden correr sin la MySQL legacy accesible.
+
 **Patrón de las migraciones `fill_*`** (copia `doctrine` → `sqlite`):
 - El origen trae `NULL` en columnas declaradas NOT NULL → `SQLSTATE[23000]: NOT NULL constraint failed`. Según el caso:
   - **Booleano con `->default(...)`** (`c652_incrementa`, `c652_reduce`): coalescer en el insert con `?? true`.

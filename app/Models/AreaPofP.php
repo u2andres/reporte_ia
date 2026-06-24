@@ -51,8 +51,7 @@ class AreaPofP extends Model
    */
   public static function getEstablecimientosArea($area, $anio = null): array
   {
-    return DB::connection('doctrine')
-      ->table('680_POF_P as p')
+    return DB::table('680_POF_P as p') // conexion por defecto 'sqlite' (datos migrados desde 'doctrine')
       ->join('658_ESTABLECIMIENTO_POF_P as e', 'e.c658_id', '=', 'p.c680_658_id')
       ->join('664_MODALIDAD_POF_P as m', 'm.c664_id', '=', 'e.c658_664_id')
       ->where('m.c664_650_id', $area)
