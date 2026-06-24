@@ -61,6 +61,8 @@ El caso real: combinar el `rpt_min02` de **todos los establecimientos de un áre
 ### 8. Tablas locales SQLite + link en la página de inicio (06-23)
 Se sumaron **migraciones de relleno (`fill_*`)** que copian datos desde la conexión `doctrine` (origen legacy) a tablas propias en **SQLite**: `680_POF_P`, `652_CARGO_POF_P`, `650_AREA_POF_P`, `664_MODALIDAD_POF_P`. También se reemplazó el botón "Deploy now" de la página de inicio (`welcome.blade.php`) por un link **"Armado de los Reportes por Área"** que apunta a `route('reporte.longops.areaDemo')` → `/reporte/longops-area-demo`.
 
+**`composer setup` ya no migra, importa el dump**: con la base SQLite ya armada (datos copiados desde `doctrine` vía las `fill_*`), se exportó a `database/database.sqlite.sql` y el `setup` la reconstruye desde ese dump en vez de correr migraciones. Se quitó `@php artisan migrate --force` del script `setup` (`composer.json`) y se agregó `@php database/setup_sqlite.php` (importa el `.sql` a `database.sqlite` vía PDO; idempotente, limpia las tablas antes de importar). El `.sqlite` queda gitignored (se genera); el `.sql` se versiona. Las `fill_*` siguen disponibles para regenerar la base; tras usarlas hay que **re-exportar** el dump.
+
 **Patrón de las migraciones `fill_*`** (copia `doctrine` → `sqlite`):
 - El origen trae `NULL` en columnas declaradas NOT NULL → `SQLSTATE[23000]: NOT NULL constraint failed`. Según el caso:
   - **Booleano con `->default(...)`** (`c652_incrementa`, `c652_reduce`): coalescer en el insert con `?? true`.

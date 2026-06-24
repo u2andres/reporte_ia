@@ -38,7 +38,7 @@
             "composer install",
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
             "@php artisan key:generate",
-            "@php artisan migrate --force",
+            "@php database/setup_sqlite.php",
             "npm install",
             "npm run build"
         ],
